@@ -28,3 +28,7 @@
 .ant-badge-count {
   background-color: var(--light-yellow) !important;
 }
+
+.ant-form-item-explain-error {
+  margin: 0.25rem 0 0.5rem;
+}

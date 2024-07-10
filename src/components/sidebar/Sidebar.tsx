@@ -42,7 +42,12 @@ const Sidebar = () => {
     <Sider width={"20vw"} className={cx("sidebar")}>
       <Flex align="center">
         <a className={cx("logo")}>
-          <Image src="./logo.png" preview={false} width={80} height={40} />
+          <Image
+            src="./images/logo.png"
+            preview={false}
+            width={80}
+            height={40}
+          />
         </a>
       </Flex>
       <Menu

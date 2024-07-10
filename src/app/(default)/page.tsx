@@ -1,5 +1,9 @@
-import Dashboard from "@/components/pages/Dashboard";
+import { auth } from "@/auth";
 
-export default function Home() {
-  return <main>{/* <Dashboard /> */}</main>;
+export default async function Home() {
+  // const session = await auth();
+  // if (session && session.user) {
+  //   console.log(session.user.name);
+  // }
+  return <main></main>;
 }

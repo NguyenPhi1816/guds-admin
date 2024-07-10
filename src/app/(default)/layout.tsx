@@ -6,13 +6,13 @@ import AppHeader from "@/components/header/Header";
 
 export const metadata: Metadata = {
   icons: {
-    icon: "/basic-logo.png",
+    icon: "/images/basic-logo.png",
   },
   title: "Dashboard - GUDS",
   description: "Trang quản lý dành cho admin",
 };
 
-export default function DefaultLayout({
+export default async function DefaultLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
