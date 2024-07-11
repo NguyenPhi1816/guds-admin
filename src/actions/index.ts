@@ -1,6 +1,7 @@
 "use server";
 
 import { signIn, signOut } from "@/auth";
+import { refreshToken } from "@/services/auth";
 import { AuthError } from "next-auth";
 
 export const doCredentialLogin = async (formData: FormData) => {
@@ -25,5 +26,14 @@ export const doCredentialLogin = async (formData: FormData) => {
       }
     }
     throw error;
+  }
+};
+
+export const doRefreshToken = async (refresh_token: string) => {
+  try {
+    const token = await refreshToken(refresh_token);
+    return token;
+  } catch (error) {
+    throw new Error("Something went wrong");
   }
 };

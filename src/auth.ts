@@ -18,6 +18,7 @@ export const {
       },
       async authorize(credentials) {
         const { phoneNumber, password } = credentials;
+
         const tokens = await authenticate({
           phoneNumber: phoneNumber as string,
           password: password as string,
@@ -29,6 +30,7 @@ export const {
         if (!profile) {
           return null;
         }
+
         const response = {
           id: profile.id.toString(),
           name: profile.firstName + " " + profile.lastName,
@@ -43,7 +45,13 @@ export const {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === "update") {
+        return {
+          ...token,
+          ...session.user,
+        };
+      }
       return { ...token, ...user };
     },
     async session({ session, token, user }) {
