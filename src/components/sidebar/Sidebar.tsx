@@ -9,7 +9,9 @@ import {
   TruckOutlined,
   TeamOutlined,
   MobileOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
+import { usePathname } from "next/navigation";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -28,16 +30,23 @@ function getItem(
 }
 
 const items: MenuItem[] = [
-  getItem(<a href="/category">Danh mục sản phẩm</a>, "1", <ProductOutlined />),
-  getItem("Nhãn hàng", "2", <TagsOutlined />),
-  getItem("Sản phẩm", "sub1", <MobileOutlined />),
-  getItem("Khách hàng", "sub2", <TeamOutlined />),
-  getItem("Đơn hàng", "9", <TruckOutlined />),
+  getItem(<a href="/">Trang chủ</a>, "/", <HomeOutlined />),
+  getItem(
+    <a href="/category">Danh mục sản phẩm</a>,
+    "/category",
+    <ProductOutlined />
+  ),
+  getItem(<a href="/brand">Nhãn hàng</a>, "/brand", <TagsOutlined />),
+  getItem(<a href="/product">Sản phẩm</a>, "/product", <MobileOutlined />),
+  getItem(<a href="/customer">Khách hàng</a>, "/customer", <TeamOutlined />),
+  getItem(<a href="/order">Đơn hàng</a>, "/order", <TruckOutlined />),
 ];
 
 const cx = classNames.bind(styles);
 
 const Sidebar = () => {
+  const pathName = usePathname();
+
   return (
     <Sider width={"20vw"} className={cx("sidebar")}>
       <Flex align="center">
@@ -55,6 +64,7 @@ const Sidebar = () => {
         defaultSelectedKeys={["1"]}
         mode="inline"
         items={items}
+        selectedKeys={[pathName]}
       />
     </Sider>
   );

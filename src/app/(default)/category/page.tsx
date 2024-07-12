@@ -1,10 +1,6 @@
-import { auth } from "@/auth";
+import CategoryPage from "@/components/pages/category/Category";
 
 const Page = async () => {
-  const session = await auth();
-
-  // console.log("mySession: ", session);
-
-  return <div>This is category page</div>;
+  return <CategoryPage />;
 };
 export default Page;

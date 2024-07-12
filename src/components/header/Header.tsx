@@ -50,7 +50,7 @@ const AppHeader = () => {
             </Badge>
           </Flex>
           <Flex className={cx("flex")} align="center" justify="center">
-            {session && session.user ? (
+            {session && session.user && (
               <Dropdown menu={{ items }} placement="bottomLeft">
                 <Space>
                   <Text className={cx("user-name")}>{session.user.name}</Text>
@@ -65,8 +65,6 @@ const AppHeader = () => {
                   />
                 </Space>
               </Dropdown>
-            ) : (
-              <Button href="/login">Đăng nhập</Button>
             )}
           </Flex>
         </Space>
