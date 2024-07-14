@@ -21,3 +21,11 @@ export type AddCategoryRequest = {
   description: string;
   parentId: number | null;
 };
+
+export type EditCategoryRequest = {
+  id: number;
+  name: string;
+  image: string;
+  description: string;
+  parentId: number | null;
+};

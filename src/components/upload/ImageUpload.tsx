@@ -1,10 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
-import { Flex, message, Upload } from "antd";
+import { message, Upload } from "antd";
 import type { GetProp, UploadProps } from "antd";
-import { uploadImages } from "@/services/upload";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
+
+const getBase64 = (img: FileType, callback: (url: string) => void) => {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => callback(reader.result as string));
+  reader.readAsDataURL(img);
+};
 
 const beforeUpload = (file: FileType) => {
   const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
@@ -19,12 +24,19 @@ const beforeUpload = (file: FileType) => {
 };
 
 interface IImageUpload {
-  onChange: (url: string) => void;
+  defaultValue?: string | null;
+  onChange: (file: File) => void;
 }
 
-const ImageUpload: React.FC<IImageUpload> = ({ onChange }) => {
+const ImageUpload: React.FC<IImageUpload> = ({ defaultValue, onChange }) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>();
+
+  useEffect(() => {
+    if (defaultValue) {
+      setImageUrl(defaultValue);
+    }
+  }, [defaultValue]);
 
   const uploadButton = (
     <button style={{ border: 0, background: "none" }} type="button">
@@ -33,18 +45,15 @@ const ImageUpload: React.FC<IImageUpload> = ({ onChange }) => {
     </button>
   );
 
-  const uploadAction = async (file: File): Promise<string> => {
-    try {
-      setLoading(true);
-      const data = await uploadImages([file]);
-      onChange(data.paths[0]);
-      setImageUrl(data.paths[0]);
-      return data.paths[0];
-    } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+  const handleChange: UploadProps["onChange"] = (info) => {
+    getBase64(info.file.originFileObj as FileType, (url) => {
+      setImageUrl(url);
+    });
+  };
+
+  const uploadAction = (file: File) => {
+    onChange(file);
+    return "";
   };
 
   return (
@@ -53,8 +62,9 @@ const ImageUpload: React.FC<IImageUpload> = ({ onChange }) => {
       listType="picture-card"
       className="avatar-uploader"
       showUploadList={false}
-      action={uploadAction}
       beforeUpload={beforeUpload}
+      onChange={handleChange}
+      action={uploadAction}
     >
       {imageUrl ? (
         <img src={imageUrl} alt="avatar" style={{ width: "100%" }} />

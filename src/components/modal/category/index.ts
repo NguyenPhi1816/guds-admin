@@ -1,1 +1,1 @@
-export { default } from "./AddCategoryModal";
+export { default } from "./CategoryModal";
