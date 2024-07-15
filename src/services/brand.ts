@@ -1,43 +1,25 @@
 "use server";
-import {
-  AddCategoryRequest,
-  CategoryResponse,
-  EditCategoryRequest,
-} from "@/types/category";
+import { Brand, CreateBrandRequest, UpdateBrandRequest } from "@/types/brand";
 import { api } from "./api";
 import { auth } from "@/auth";
 import { ErrorResponse } from "@/types/error";
 import { ProductResponse } from "@/components/modal/productTableModal/ProductTableModal";
 
-export const getAllCategory = async (): Promise<CategoryResponse[]> => {
+export const getAllBrand = async (): Promise<Brand[]> => {
   try {
-    const res = await fetch(`${api}/categories`, {
-      next: { tags: ["category"] },
-    });
-    let data = (await res.json()) as CategoryResponse[];
+    const res = await fetch(`${api}/brands`);
+    const data = (await res.json()) as Brand[];
     return data;
   } catch (error) {
     throw error;
   }
 };
 
-export const getCategoryChildren = async (
-  slug: string
-): Promise<CategoryResponse[]> => {
-  try {
-    const res = await fetch(`${api}/categories/children/${slug}`);
-    let data = (await res.json()) as CategoryResponse[];
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const getCategoryProduct = async (
+export const getBrandProduct = async (
   slug: string
 ): Promise<ProductResponse[]> => {
   try {
-    const res = await fetch(`${api}/categories/product/${slug}`);
+    const res = await fetch(`${api}/brands/product/${slug}`);
     let data = (await res.json()) as ProductResponse[];
     return data;
   } catch (error) {
@@ -45,14 +27,12 @@ export const getCategoryProduct = async (
   }
 };
 
-export const addCategory = async (
-  data: AddCategoryRequest
-): Promise<CategoryResponse> => {
+export const createBrand = async (data: CreateBrandRequest): Promise<Brand> => {
   try {
     const session = await auth();
     if (session) {
       const accessToken = session.user.access_token;
-      const res = await fetch(`${api}/categories`, {
+      const res = await fetch(`${api}/brands`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
@@ -60,7 +40,12 @@ export const addCategory = async (
         method: "POST",
         body: JSON.stringify(data),
       });
-      const result = await res.json();
+      const result: Brand | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
       return result;
     } else {
       throw new Error("No session");
@@ -70,14 +55,12 @@ export const addCategory = async (
   }
 };
 
-export const editCategory = async (
-  data: EditCategoryRequest
-): Promise<CategoryResponse> => {
+export const updateBrand = async (data: UpdateBrandRequest): Promise<Brand> => {
   try {
     const session = await auth();
     if (session) {
       const accessToken = session.user.access_token;
-      const res = await fetch(`${api}/categories`, {
+      const res = await fetch(`${api}/brands`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
@@ -85,7 +68,7 @@ export const editCategory = async (
         method: "PUT",
         body: JSON.stringify(data),
       });
-      const result: CategoryResponse | ErrorResponse = await res.json();
+      const result: Brand | ErrorResponse = await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);

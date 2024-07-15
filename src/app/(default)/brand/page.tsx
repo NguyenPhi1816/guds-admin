@@ -1,5 +1,7 @@
+import BrandPage from "@/components/pages/brand/Brand";
+
 const Page = () => {
-  return <>This is brand page</>;
+  return <BrandPage />;
 };
 
 export default Page;
