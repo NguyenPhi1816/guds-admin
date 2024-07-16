@@ -4,8 +4,11 @@ import {
   RefreshTokenResponse,
 } from "@/types/auth";
 import { api } from "./api";
+import { ErrorResponse } from "@/types/error";
 
-export const authenticate = async (request: LoginRequest) => {
+export const authenticate = async (
+  request: LoginRequest
+): Promise<LoginResponse | undefined> => {
   try {
     const { phoneNumber, password } = request;
     const res = await fetch(`${api}/auth/signin`, {
@@ -16,18 +19,21 @@ export const authenticate = async (request: LoginRequest) => {
         password,
       }),
     });
-    const data = await res.json();
-    if (data.error) {
+    const data: LoginResponse | ErrorResponse = await res.json();
+
+    if ("error" in data) {
       return undefined;
     }
-    const tokens = data as LoginResponse;
-    return tokens;
+
+    return data;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 };
 
-export const refreshToken = async (refreshToken: string) => {
+export const refreshToken = async (
+  refreshToken: string
+): Promise<RefreshTokenResponse | undefined> => {
   try {
     const res = await fetch(`${api}/auth/refresh-token`, {
       method: "POST",
@@ -36,13 +42,14 @@ export const refreshToken = async (refreshToken: string) => {
         Authorization: "Bearer " + refreshToken,
       },
     });
-    const data = await res.json();
-    if (data.error) {
+    const data: RefreshTokenResponse | ErrorResponse = await res.json();
+
+    if ("error" in data) {
       return undefined;
     }
-    const token = data as RefreshTokenResponse;
-    return token;
+
+    return data;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 };

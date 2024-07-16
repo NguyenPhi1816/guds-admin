@@ -1,6 +1,6 @@
 import { getCategoryChildren } from "@/services/category";
 import { CategoryResponse } from "@/types/category";
-import { Button, Flex, Modal, Table } from "antd";
+import { Button, Flex, message, Modal, Table } from "antd";
 import Column from "antd/es/table/Column";
 import React, { useEffect, useState } from "react";
 
@@ -17,6 +17,7 @@ const CategoryTableModal: React.FC<ICategoryTableModal> = ({
 }) => {
   const [data, setData] = useState<CategoryResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     const fetcher = async () => {
@@ -25,7 +26,12 @@ const CategoryTableModal: React.FC<ICategoryTableModal> = ({
         const res: CategoryResponse[] = await getCategoryChildren(slug);
         setData(res);
       } catch (error) {
-        console.error(error);
+        if (error instanceof Error) {
+          messageApi.open({
+            type: "error",
+            content: error.message,
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -85,6 +91,7 @@ const CategoryTableModal: React.FC<ICategoryTableModal> = ({
           )}
         />
       </Table>
+      {contextHolder}
     </Modal>
   );
 };

@@ -14,7 +14,12 @@ export const getAllCategory = async (): Promise<CategoryResponse[]> => {
     const res = await fetch(`${api}/categories`, {
       next: { tags: ["category"] },
     });
-    let data = (await res.json()) as CategoryResponse[];
+    let data: CategoryResponse[] | ErrorResponse = await res.json();
+
+    if ("error" in data) {
+      throw new Error(data.message);
+    }
+
     return data;
   } catch (error) {
     throw error;
@@ -26,7 +31,12 @@ export const getCategoryChildren = async (
 ): Promise<CategoryResponse[]> => {
   try {
     const res = await fetch(`${api}/categories/children/${slug}`);
-    let data = (await res.json()) as CategoryResponse[];
+    let data: CategoryResponse[] | ErrorResponse = await res.json();
+
+    if ("error" in data) {
+      throw new Error(data.message);
+    }
+
     return data;
   } catch (error) {
     throw error;
@@ -38,7 +48,12 @@ export const getCategoryProduct = async (
 ): Promise<ProductResponse[]> => {
   try {
     const res = await fetch(`${api}/categories/product/${slug}`);
-    let data = (await res.json()) as ProductResponse[];
+    let data: ProductResponse[] | ErrorResponse = await res.json();
+
+    if ("error" in data) {
+      throw new Error(data.message);
+    }
+
     return data;
   } catch (error) {
     throw error;
@@ -60,7 +75,12 @@ export const addCategory = async (
         method: "POST",
         body: JSON.stringify(data),
       });
-      const result = await res.json();
+      const result: CategoryResponse | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
       return result;
     } else {
       throw new Error("No session");

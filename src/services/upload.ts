@@ -1,15 +1,23 @@
 import { UploadResponse } from "@/types/upload";
-import { api } from "./api";
+import { ErrorResponse } from "@/types/error";
 
 export const uploadImages = async (files: File[]): Promise<UploadResponse> => {
   try {
     const formData = new FormData();
     formData.append("file", files[0] as any);
-    const res = await fetch(`http://localhost:8080/api/images/upload`, {
-      method: "POST",
-      body: formData,
-    });
-    const data = (await res.json()) as UploadResponse;
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_GUDS_API}/images/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    const data: UploadResponse | ErrorResponse = await res.json();
+
+    if ("error" in data) {
+      throw new Error(data.message);
+    }
+
     return data;
   } catch (error) {
     throw error;

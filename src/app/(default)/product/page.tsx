@@ -1,5 +1,7 @@
+import ProductPage from "@/components/pages/product/Product";
+
 const Page = () => {
-  return <>This is product page</>;
+  return <ProductPage />;
 };
 
 export default Page;

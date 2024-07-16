@@ -1,8 +1,9 @@
 "use client";
-import styles from "./Category.module.scss";
+import styles from "./Product.module.scss";
 import classNames from "classnames/bind";
 
 import {
+  Badge,
   Button,
   Flex,
   Form,
@@ -10,41 +11,45 @@ import {
   message,
   Space,
   Table,
+  Tag,
   Typography,
 } from "antd";
 import Title from "antd/es/typography/Title";
 import { useEffect, useState } from "react";
-import { CategoryParentResponse, CategoryResponse } from "@/types/category";
-import { getAllCategory } from "@/services/category";
 import {
   EditOutlined,
   PlusCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import CategoryModal, {
-  CategoryModalType,
-} from "@/components/modal/category/CategoryModal";
 import Column from "antd/es/table/Column";
-import CategoryTableModal from "@/components/modal/categoryTableModal";
 import ProductTableModal from "@/components/modal/productTableModal";
+import { getAllBrand } from "@/services/brand";
+import { Brand } from "@/types/brand";
+import BrandModal, {
+  BrandModalType,
+} from "@/components/modal/brand/BrandModal";
 import { ProductTableModalType } from "@/components/modal/productTableModal/ProductTableModal";
+import { BaseProduct } from "@/types/product";
+import { getAllProduct } from "@/services/product";
+import { productStatus } from "@/constant/enum/productStatus";
+import ProductModal, {
+  ProductModalType,
+} from "@/components/modal/product/ProductModal";
 
 const cx = classNames.bind(styles);
 
-const CategoryPage = () => {
-  const [data, setData] = useState<CategoryResponse[]>([]);
+const ProductPage = () => {
+  const [data, setData] = useState<BaseProduct[]>([]);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchValue, setSearchValue] = useState<string>("");
-  const [searchResult, setSearchResult] = useState<CategoryResponse[]>([]);
-  const [modalType, setModalType] = useState<CategoryModalType>(
-    CategoryModalType.CREATE
+  const [searchResult, setSearchResult] = useState<BaseProduct[]>([]);
+  const [modalType, setModalType] = useState<ProductModalType>(
+    ProductModalType.CREATE
   );
-  const [modalValue, setModalValue] = useState<CategoryResponse | null>(null);
+  const [modalValue, setModalValue] = useState<Brand | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isChildrenModalOpen, setIsChildrenModalOpen] =
-    useState<boolean>(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
   const [currentCategorySlug, setCurrentCategorySlug] = useState<string>("");
   const [messageApi, contextHolder] = message.useMessage();
@@ -53,7 +58,7 @@ const CategoryPage = () => {
     const fetcher = async () => {
       try {
         setIsLoading(true);
-        const res = await getAllCategory();
+        const res = await getAllProduct();
         if (res) {
           setData(res);
         }
@@ -82,19 +87,19 @@ const CategoryPage = () => {
   }, [data, searchValue]);
 
   const showCreateModal = () => {
-    setModalType(CategoryModalType.CREATE);
+    setModalType(ProductModalType.CREATE);
     setIsModalOpen(true);
   };
 
-  const showEditModal = (item: CategoryResponse) => {
+  const showEditModal = (item: Brand) => {
     setModalValue(item);
-    setModalType(CategoryModalType.EDIT);
+    setModalType(ProductModalType.UPDATE);
     setIsModalOpen(true);
   };
 
   const handleCancel = () => {
     setIsModalOpen(false);
-    setModalType(CategoryModalType.CREATE);
+    setModalType(ProductModalType.CREATE);
     setModalValue(null);
   };
 
@@ -106,16 +111,6 @@ const CategoryPage = () => {
         content: message,
       });
     }
-  };
-
-  const handleOpenChildrenModal = (slug: string) => {
-    setIsChildrenModalOpen(true);
-    setCurrentCategorySlug(slug);
-  };
-
-  const handleCancelChildrenModal = () => {
-    setIsChildrenModalOpen(false);
-    setCurrentCategorySlug("");
   };
 
   const handleOpenProductModal = (slug: string) => {
@@ -130,14 +125,14 @@ const CategoryPage = () => {
 
   return (
     <div className={cx("wrapper")}>
-      <Title>Danh sách danh mục sản phẩm</Title>
+      <Title>Danh sách sản phẩm</Title>
       <Flex justify="space-between">
         <Form>
           <Form.Item>
             <Space>
               <Typography.Text>Tìm kiếm</Typography.Text>
               <Input
-                placeholder="Tên danh mục"
+                placeholder="Tên sản phẩm"
                 suffix={<SearchOutlined />}
                 size="large"
                 value={searchValue}
@@ -166,7 +161,7 @@ const CategoryPage = () => {
               disabled={isLoading}
             >
               <PlusCircleOutlined />
-              Thêm danh mục
+              Thêm sản phẩm
             </Button>
           </Space>
         </div>
@@ -181,52 +176,45 @@ const CategoryPage = () => {
           title="Id"
           dataIndex="id"
           key="id"
-          sorter={(a: CategoryResponse, b: CategoryResponse) => {
+          sorter={(a: BaseProduct, b: BaseProduct) => {
             return a.id - b.id;
           }}
         />
         <Column title="Slug" dataIndex="slug" key="slug" />
-        <Column title="Tên danh mục" dataIndex="name" key="name" />
-        <Column title="Mô tả" dataIndex="description" key="description" />
+        <Column title="Tên sản phẩm" dataIndex="name" key="name" />
         <Column
-          title="Danh mục cha"
-          dataIndex="parent"
-          key="parent"
-          render={(parent: CategoryParentResponse) => {
-            if (parent) return <>{parent.name}</>;
-            return <>Không có</>;
+          title="Danh mục"
+          dataIndex="categories"
+          key="categories"
+          render={(categories: string[]) => (
+            <Space>
+              {categories.map((item: string) => (
+                <Tag key={item}>{item}</Tag>
+              ))}
+            </Space>
+          )}
+        />
+        <Column title="Thương hiệu" dataIndex="brand" key="brand" />
+        <Column
+          title="Trạng thái"
+          dataIndex="status"
+          key="status"
+          render={(status: string) => {
+            switch (status) {
+              case productStatus.ACTIVE: {
+                return <Badge status="success" text={status} />;
+              }
+            }
           }}
-        />
-        <Column
-          title="Sản phẩm"
-          key="baseProduct"
-          render={(_category: CategoryResponse) => (
-            <Flex justify="center">
-              <Button onClick={() => handleOpenProductModal(_category.slug)}>
-                {_category.numberOfBaseProduct}
-              </Button>
-            </Flex>
-          )}
-        />
-        <Column
-          title="Danh mục con"
-          key="children"
-          render={(_category: CategoryResponse) => (
-            <Flex justify="center">
-              <Button onClick={() => handleOpenChildrenModal(_category.slug)}>
-                {_category.numberOfChildren}
-              </Button>
-            </Flex>
-          )}
         />
         <Column
           title="Hành động"
           key="action"
-          render={(_category: CategoryResponse) => (
+          render={(_brand: Brand) => (
             <Button
               type="primary"
               className={cx("btn")}
-              onClick={() => showEditModal(_category)}
+              onClick={() => showEditModal(_brand)}
             >
               <EditOutlined />
               Chỉnh sửa
@@ -234,21 +222,13 @@ const CategoryPage = () => {
           )}
         />
       </Table>
-      <CategoryModal
+      <ProductModal
         type={modalType}
-        value={modalValue}
         open={isModalOpen}
-        categories={data}
         onCancel={handleCancel}
-        onFinish={handleRefresh}
-      />
-      <CategoryTableModal
-        slug={currentCategorySlug}
-        open={isChildrenModalOpen}
-        onCancel={handleCancelChildrenModal}
       />
       <ProductTableModal
-        type={ProductTableModalType.CATEGORY}
+        type={ProductTableModalType.BRAND}
         slug={currentCategorySlug}
         open={isProductModalOpen}
         onCancel={handleCancelProductModal}
@@ -258,4 +238,4 @@ const CategoryPage = () => {
   );
 };
 
-export default CategoryPage;
+export default ProductPage;

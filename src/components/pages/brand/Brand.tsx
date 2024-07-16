@@ -55,7 +55,12 @@ const BrandPage = () => {
           setData(res);
         }
       } catch (error) {
-        throw error;
+        if (error instanceof Error) {
+          messageApi.open({
+            type: "error",
+            content: error.message,
+          });
+        }
       } finally {
         setRefresh(false);
         setIsLoading(false);

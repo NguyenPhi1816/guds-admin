@@ -1,8 +1,8 @@
 import { productStatus } from "@/constant/enum/productStatus";
 import { getBrandProduct } from "@/services/brand";
-import { getCategoryChildren, getCategoryProduct } from "@/services/category";
+import { getCategoryProduct } from "@/services/category";
 import { CategoryResponse } from "@/types/category";
-import { Badge, Button, Modal, Space, Table, Tag } from "antd";
+import { Badge, Button, message, Modal, Space, Table, Tag } from "antd";
 import Column from "antd/es/table/Column";
 import React, { useEffect, useState } from "react";
 
@@ -43,6 +43,7 @@ const ProductTableModal: React.FC<IProductTableModal> = ({
 }) => {
   const [data, setData] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     const fetcher = async () => {
@@ -61,7 +62,12 @@ const ProductTableModal: React.FC<IProductTableModal> = ({
           }
         }
       } catch (error) {
-        console.error(error);
+        if (error instanceof Error) {
+          messageApi.open({
+            type: "error",
+            content: error.message,
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -130,6 +136,7 @@ const ProductTableModal: React.FC<IProductTableModal> = ({
           }}
         />
       </Table>
+      {contextHolder}
     </Modal>
   );
 };

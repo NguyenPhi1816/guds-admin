@@ -8,7 +8,12 @@ import { ProductResponse } from "@/components/modal/productTableModal/ProductTab
 export const getAllBrand = async (): Promise<Brand[]> => {
   try {
     const res = await fetch(`${api}/brands`);
-    const data = (await res.json()) as Brand[];
+    const data: Brand[] | ErrorResponse = await res.json();
+
+    if ("error" in data) {
+      throw new Error(data.message);
+    }
+
     return data;
   } catch (error) {
     throw error;
@@ -20,7 +25,12 @@ export const getBrandProduct = async (
 ): Promise<ProductResponse[]> => {
   try {
     const res = await fetch(`${api}/brands/product/${slug}`);
-    let data = (await res.json()) as ProductResponse[];
+    let data: ProductResponse[] | ErrorResponse = await res.json();
+
+    if ("error" in data) {
+      throw new Error(data.message);
+    }
+
     return data;
   } catch (error) {
     throw error;
