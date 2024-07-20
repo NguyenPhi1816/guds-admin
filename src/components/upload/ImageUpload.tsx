@@ -30,7 +30,7 @@ interface IImageUpload {
 
 const ImageUpload: React.FC<IImageUpload> = ({ defaultValue, onChange }) => {
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string>();
+  const [imageUrl, setImageUrl] = useState<string>("");
 
   useEffect(() => {
     if (defaultValue) {

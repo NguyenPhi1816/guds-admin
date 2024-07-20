@@ -1,0 +1,15 @@
+.wrapper {
+  padding: 1rem;
+  height: 100%;
+  background-color: var(--white);
+  overflow-y: scroll;
+}
+
+.btn-wrapper {
+  margin-bottom: 1rem;
+}
+
+.btn {
+  background: var(--light-yellow) !important;
+  color: var(--black) !important;
+}

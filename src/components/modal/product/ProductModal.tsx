@@ -1,76 +1,79 @@
 import styles from "./ProductModal.module.scss";
 import classNames from "classnames/bind";
 
-import ImageUpload from "@/components/upload/ImageUpload";
-import {
-  Button,
-  Divider,
-  Flex,
-  Form,
-  Input,
-  message,
-  Modal,
-  Select,
-  Space,
-  Typography,
-} from "antd";
+import { Button, Flex, message, Modal, Typography } from "antd";
 import React, { useEffect, useState } from "react";
-import { CategoryResponse } from "@/types/category";
-import { Brand } from "@/types/brand";
-import { getAllCategory } from "@/services/category";
-import { getAllBrand } from "@/services/brand";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
-import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { uploadImages } from "@/services/upload";
+import {
+  BaseProductDetail,
+  CreateBaseProductRequest,
+  CreateOptionValueRequest,
+  CreateProductVariantRequest,
+  OptionValuesRequest,
+  OptionValuesResponse,
+  ProductVariantResponse,
+  UpdateBaseProductRequest,
+  UpdateProductVariantRequest,
+  ValuesResponse,
+} from "@/types/product";
+import {
+  createBaseProduct,
+  createOptionValues,
+  createProductVariant,
+  getBaseProductBySlug,
+  updateBaseProduct,
+  updateProductVariant,
+} from "@/services/product";
+import BaseProductForm from "./BaseProductForm";
+import OptionValueForm from "./OptionValueForm";
+import ProductVariantForm, { Variant } from "./ProductVariantForm";
 
 export enum ProductModalType {
   CREATE,
   UPDATE,
 }
 
-export type Option = {
-  name: string;
-  values: string[];
-};
-
 interface IProductModal {
   type: ProductModalType;
   open: boolean;
+  slug?: string | null;
   onCancel: () => void;
+  onRefresh: (message: string) => void;
 }
 
 const cx = classNames.bind(styles);
 
-const { Text } = Typography;
-
-const ProductModal: React.FC<IProductModal> = ({ type, open, onCancel }) => {
-  const DEFAULT_OPTION_NAME = "Tùy chọn mới";
-  const DEFAULT_VALUE_NAME = "Giá trị mới";
+const ProductModal: React.FC<IProductModal> = ({
+  type,
+  open,
+  slug,
+  onCancel,
+  onRefresh,
+}) => {
+  const INITIAL_BASE_PRODUCT: CreateBaseProductRequest = {
+    name: "",
+    description: "",
+    brandId: -1,
+    categoryIds: [],
+    images: [],
+  };
 
   const [title, setTitle] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [name, setName] = useState<string>("");
-  const [desc, setDesc] = useState<string>("");
-  const [images, setImages] = useState<(File | null)[]>([null, null, null]);
-  const [imageUrls, setImageUrls] = useState<(string | null)[]>([
+  const [dataFromSlug, setDataFromSlug] = useState<BaseProductDetail | null>(
+    null
+  );
+  const [baseProduct, setBaseProduct] =
+    useState<CreateBaseProductRequest>(INITIAL_BASE_PRODUCT);
+  const [baseProductImages, setBaseProductImages] = useState<(File | null)[]>([
     null,
     null,
     null,
   ]);
-  const [option, setOption] = useState<Option[]>([]);
+  const [option, setOption] = useState<OptionValuesRequest[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [refreshForm, setRefreshForm] = useState<boolean>(true);
   const [messageApi, contextHolder] = message.useMessage();
-
-  useEffect(() => {
-    const fetcher = async () => {
-      const promises = [getAllCategory(), getAllBrand()];
-      const [_categories, _brands] = await Promise.all(promises);
-      setCategories(_categories as CategoryResponse[]);
-      setBrands(_brands as Brand[]);
-    };
-    fetcher();
-  }, []);
 
   useEffect(() => {
     switch (type) {
@@ -85,93 +88,313 @@ const ProductModal: React.FC<IProductModal> = ({ type, open, onCancel }) => {
     }
   }, [type]);
 
+  useEffect(() => {
+    const fetcher = async (slug: string) => {
+      try {
+        const data: BaseProductDetail = await getBaseProductBySlug(slug);
+        setDataFromSlug(data);
+        const newBaseProduct: CreateBaseProductRequest = {
+          name: data.name,
+          description: data.description,
+          images: data.images.map((image) => image.path),
+          categoryIds: data.categories.map((category) => category.id),
+          brandId: data.brand.id,
+        };
+        setBaseProduct(newBaseProduct);
+        setOption(data.optionValues);
+        setVariants(
+          data.productVariants.map((variant) => ({
+            id: variant.id,
+            imageUrl: variant.image,
+            optionValues: variant.optionValue.map((opval) => opval.value),
+            image: null,
+            price: variant.price,
+            quantity: variant.quantity,
+          }))
+        );
+      } catch (error) {
+        if (error instanceof Error) {
+          messageApi.error(error.message);
+        }
+      }
+    };
+    if (slug && refreshForm) {
+      fetcher(slug);
+      setRefreshForm(false);
+    }
+  }, [slug, refreshForm]);
+
+  const handleBaseProductFormChange = (
+    baseProduct: CreateBaseProductRequest,
+    images: (File | null)[]
+  ) => {
+    setBaseProduct(baseProduct);
+    setBaseProductImages(images);
+  };
+
+  const handleOptionValueFormChange = (optionValues: OptionValuesRequest[]) => {
+    setOption(optionValues);
+  };
+
+  const handleProductVariantFormChange = (variants: Variant[]) => {
+    setVariants(variants);
+  };
+
   const handleCancel = () => {
-    setImages([null, null, null]);
+    setBaseProduct(INITIAL_BASE_PRODUCT);
+    setOption([]);
+    setVariants([]);
+    setRefreshForm(true);
     onCancel();
   };
 
-  const handleImageChange = (index: number, file: File) => {
-    setImages((prev) => {
-      const newValue = prev;
-      newValue[index] = file;
-      return newValue;
-    });
+  const generateCombinations = (options: OptionValuesRequest[]): string[][] => {
+    const results: string[][] = [];
+    const generate = (current: string[], depth: number) => {
+      if (depth === options.length) {
+        results.push(current);
+        return;
+      }
+      for (const value of options[depth].values) {
+        generate([...current, value], depth + 1);
+      }
+    };
+    generate([], 0);
+    return results;
   };
 
-  const handleCreateOption = () => {
-    const defaultOptionExists = option.some(
-      (item) => item.name === DEFAULT_OPTION_NAME
-    );
-    if (defaultOptionExists) {
-      messageApi.error("Vui lòng nhập tùy chọn trước khi thêm tùy chọn mới");
-      return;
+  useEffect(() => {
+    const allCombinations = generateCombinations(option);
+    switch (type) {
+      case ProductModalType.CREATE: {
+        const initialVariants: Variant[] = allCombinations.map(
+          (combination) => ({
+            id: null,
+            image: null,
+            imageUrl: "",
+            price: 1000,
+            quantity: 1,
+            optionValues: combination,
+          })
+        );
+        setVariants(initialVariants);
+        break;
+      }
+      case ProductModalType.UPDATE: {
+        // const existedCombinations = variants.map(
+        //   (variant) => variant.optionValues
+        // );
+        // if (
+        //   JSON.stringify(allCombinations) !==
+        //   JSON.stringify(existedCombinations)
+        // ) {
+        //   const newVariants: Variant[] = allCombinations.map((combination) => {
+        //     return {
+        //       image: null,
+        //       price: 1000,
+        //       quantity: 1,
+        //       optionValues: combination,
+        //     };
+        //   });
+
+        //   setVariants(newVariants);
+        // }
+        break;
+      }
     }
-    setOption((prev) => {
-      const newItem: Option = {
-        name: DEFAULT_OPTION_NAME,
-        values: [DEFAULT_VALUE_NAME],
+  }, [option]);
+
+  const handleCreateProduct = async () => {
+    let isValid = true;
+    isValid = !baseProductImages.includes(null);
+    if (!isValid) {
+      throw new Error("Vui lòng chọn 3 ảnh cho sản phẩm");
+    }
+    isValid =
+      !!baseProduct.name &&
+      !!baseProduct.description &&
+      !!baseProduct.brandId &&
+      baseProduct.categoryIds.length > 0;
+    if (!isValid) {
+      throw new Error("Vui lòng nhập đầy đủ thông tin");
+    }
+    const { paths } = await uploadImages(baseProductImages as File[]);
+    const createBaseProductRequest: CreateBaseProductRequest = {
+      name: baseProduct.name,
+      description: baseProduct.description,
+      categoryIds: baseProduct.categoryIds,
+      brandId: baseProduct.brandId,
+      images: paths,
+    };
+    const newBaseProduct = await createBaseProduct(createBaseProductRequest);
+    isValid = !!newBaseProduct;
+    if (!isValid) {
+      throw new Error("Có lỗi xảy ra trong quá trình thêm sản phẩm");
+    }
+
+    const createOptionValuesRequest: CreateOptionValueRequest = {
+      baseProductId: newBaseProduct.id,
+      optionValues: option,
+    };
+
+    const optionValuesResponse: OptionValuesResponse[] =
+      await createOptionValues(createOptionValuesRequest);
+    isValid = !!optionValuesResponse;
+    if (!isValid) {
+      throw new Error(
+        "Có lỗi xảy ra trong quá trình thêm tùy chọn cho sản phẩm"
+      );
+    }
+    const values: ValuesResponse[] = optionValuesResponse.reduce(
+      (prev, curr) => [...prev, ...curr.values],
+      [] as ValuesResponse[]
+    );
+    const productVariantImages: File[] = variants.map(
+      (variant) => variant.image as File
+    );
+    const { paths: productVariantImagePaths } = await uploadImages(
+      productVariantImages
+    );
+    const createProductVariantPromises = variants.map((variant, index) => {
+      const _optionValueIds: number[] = [];
+      for (let value of variant.optionValues) {
+        const _myValue = values.find((v) => v.valueName === value);
+        if (_myValue) {
+          _optionValueIds.push(_myValue.valueId);
+        }
+      }
+      const request: CreateProductVariantRequest = {
+        baseProductId: newBaseProduct.id,
+        image: productVariantImagePaths[index],
+        optionValueIds: _optionValueIds,
+        price: variant.price,
+        quantity: variant.quantity,
       };
-      return [...prev, newItem];
+      return createProductVariant(request);
     });
-  };
-
-  const handleRemoveOption = (optionName: string) => {
-    setOption((prev) => prev.filter((item) => item.name !== optionName));
-  };
-
-  const handleCreateValue = (optionName: string) => {
-    const defaultValueExists = option.some(
-      (item) =>
-        item.name === optionName && item.values.includes(DEFAULT_VALUE_NAME)
-    );
-    if (defaultValueExists) {
-      messageApi.error("Vui lòng nhập giá trị trước khi thêm giá trị mới");
-      return;
+    const productVariants = await Promise.all(createProductVariantPromises);
+    isValid = !!productVariants;
+    if (!isValid) {
+      throw new Error("Có lỗi xảy ra trong quá trình thêm biến thể sản phẩm");
     }
-    setOption((prev) =>
-      prev.map((item) =>
-        item.name === optionName
-          ? { ...item, values: [...item.values, DEFAULT_VALUE_NAME] }
-          : item
+    handleCancel();
+    onRefresh("Thêm sản phẩm thành công");
+  };
+
+  const handleUpdateProduct = async () => {
+    let isValid = true;
+    isValid = !dataFromSlug;
+    if (isValid) throw new Error("Có lỗi xảy ra");
+    isValid =
+      !!baseProduct.name &&
+      !!baseProduct.description &&
+      !!baseProduct.brandId &&
+      baseProduct.categoryIds.length > 0;
+    if (!isValid) {
+      throw new Error("Vui lòng nhập đầy đủ thông tin");
+    }
+
+    // update image by index
+    const imagesAndIndexesToUpdate = baseProductImages
+      .map((image, index) =>
+        image !== null ? { image: image, index: index } : {}
       )
+      .filter((image) => Object.keys(image).length !== 0);
+    const imagesToUpdate = imagesAndIndexesToUpdate.map((i) => i.image as File);
+    const { paths } = await uploadImages(imagesToUpdate);
+    const pathsToUpdate = (dataFromSlug as BaseProductDetail).images.map(
+      (i) => i.path
     );
-  };
 
-  const handleRemoveValue = (optionName: string, optionValue: string) => {
-    setOption((prev) =>
-      prev.map((item) =>
-        item.name === optionName
-          ? {
-              ...item,
-              values: item.values.filter((value) => value !== optionValue),
-            }
-          : item
-      )
+    imagesAndIndexesToUpdate.map((imageAndIndex, index) => {
+      pathsToUpdate[imageAndIndex.index as number] = paths[index];
+    });
+
+    // request
+    const updateBaseProductRequest: UpdateBaseProductRequest = {
+      id: (dataFromSlug as BaseProductDetail).id,
+      name: baseProduct.name,
+      description: baseProduct.description,
+      categoryIds: baseProduct.categoryIds,
+      brandId: baseProduct.brandId,
+      images: pathsToUpdate,
+    };
+    const updatedBaseProduct = await updateBaseProduct(
+      updateBaseProductRequest
     );
-  };
+    isValid = !!updatedBaseProduct;
+    if (!isValid) {
+      throw new Error("Có lỗi xảy ra trong quá trình chỉnh sửa sản phẩm");
+    }
 
-  const handleOptionNameChange = (index: number, value: string) => {
-    setOption((prev) => {
-      const newOptions = [...prev];
-      newOptions[index] = { ...newOptions[index], name: value };
-      return newOptions;
+    // update variant
+    const updateVariantPromises: Promise<ProductVariantResponse>[] = [];
+    // update variant if variant.image is not null
+    const editedImageVariant = variants.filter(
+      (variant) => variant.image !== null
+    );
+    const variantImagesToUpdate = editedImageVariant.map(
+      (variant) => variant.image as File
+    );
+    const { paths: variantImagePaths } = await uploadImages(
+      variantImagesToUpdate
+    );
+    editedImageVariant.map((variant, index) => {
+      const request: UpdateProductVariantRequest = {
+        productVariantId: variant.id as number,
+        image: variantImagePaths[index],
+        price: variant.price,
+        quantity: variant.quantity,
+      };
+      updateVariantPromises.push(updateProductVariant(request));
     });
-  };
-
-  const handleOptionValueChange = (
-    optionIndex: number,
-    valueIndex: number,
-    value: string
-  ) => {
-    setOption((prev) => {
-      const newOptions = [...prev];
-      newOptions[optionIndex].values[valueIndex] = value;
-      return newOptions;
+    // update variant if price or quantity change
+    const remainVariant = variants.filter((variant) => variant.image === null);
+    remainVariant.forEach((variant) => {
+      const defaultVariant = (
+        dataFromSlug as BaseProductDetail
+      ).productVariants.find(
+        (productVariant) => productVariant.id === variant.id
+      );
+      if (
+        defaultVariant &&
+        (variant.price !== defaultVariant?.price ||
+          variant.quantity !== defaultVariant.quantity)
+      ) {
+        const request: UpdateProductVariantRequest = {
+          productVariantId: variant.id as number,
+          image: variant.imageUrl as string,
+          price: variant.price,
+          quantity: variant.quantity,
+        };
+        updateVariantPromises.push(updateProductVariant(request));
+      }
     });
+    // do update
+    await Promise.all(updateVariantPromises);
+    setRefreshForm(true);
   };
 
-  const handleSubmit = () => {
-    console.log(option);
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      switch (type) {
+        case ProductModalType.CREATE: {
+          await handleCreateProduct();
+          break;
+        }
+        case ProductModalType.UPDATE: {
+          await handleUpdateProduct();
+          break;
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -179,9 +402,9 @@ const ProductModal: React.FC<IProductModal> = ({ type, open, onCancel }) => {
       destroyOnClose={true}
       title={title}
       open={open}
-      onCancel={handleCancel}
+      onCancel={() => handleCancel()}
       footer={[
-        <Button onClick={handleCancel} key={1}>
+        <Button onClick={() => handleCancel()} key={1}>
           Hủy
         </Button>,
         <Button
@@ -194,146 +417,28 @@ const ProductModal: React.FC<IProductModal> = ({ type, open, onCancel }) => {
           {title}
         </Button>,
       ]}
-      width={"90%"}
+      width={"98%"}
       className={cx("modal")}
     >
       <Flex>
         <div className={cx("form-wrapper")}>
-          <Form
-            name="AddCategory"
-            layout="vertical"
-            requiredMark="optional"
-            className={cx("form")}
-          >
-            <Form.Item name="images" label="Hình ảnh">
-              <Space>
-                {new Array(3).fill(0).map((item, index) => (
-                  <ImageUpload
-                    key={index}
-                    defaultValue={imageUrls[index]}
-                    onChange={(file) => handleImageChange(index, file)}
-                  />
-                ))}
-              </Space>
-            </Form.Item>
-            <Form.Item name="name" label="Tên sản phẩm">
-              <Input
-                placeholder="Tên sản phẩm"
-                size="large"
-                defaultValue={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </Form.Item>
-            <Form.Item name="category" label="Danh mục sản phẩm">
-              <Select
-                mode="multiple"
-                allowClear
-                placeholder="Vui lòng chọn danh mục"
-                // onChange={handleParentChange}
-              >
-                {categories.map((category) => (
-                  <Select.Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item name="brand" label="Nhãn hàng">
-              <Select
-                defaultValue={-1}
-                // onChange={handleParentChange}
-              >
-                <Select.Option value={-1}>Không</Select.Option>
-                {brands.map((brand) => (
-                  <Select.Option key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item name="desc" label="Mô tả">
-              <ReactQuill
-                className={cx("quill")}
-                theme="snow"
-                value={desc}
-                onChange={setDesc}
-              />
-            </Form.Item>
-          </Form>
+          <BaseProductForm
+            defaultValue={baseProduct}
+            onChange={handleBaseProductFormChange}
+          />
         </div>
         <div className={cx("form-wrapper")}>
-          <Flex
-            className={cx("option-header")}
-            justify="space-between"
-            align="center"
-          >
-            <Text>Tùy chọn</Text>
-            <Button onClick={handleCreateOption}>
-              <PlusCircleOutlined />
-              Thêm tùy chọn
-            </Button>
-          </Flex>
-          <Space direction="vertical">
-            {option.length > 0 &&
-              option.map((item, optionIndex) => (
-                <div key={optionIndex}>
-                  <Space>
-                    <Space>
-                      <Input
-                        placeholder="Tùy chọn"
-                        size="large"
-                        defaultValue={item.name}
-                        onChange={(e) =>
-                          handleOptionNameChange(optionIndex, e.target.value)
-                        }
-                      />
-                      <Button
-                        shape="circle"
-                        onClick={() => handleRemoveOption(item.name)}
-                      >
-                        <MinusCircleOutlined />
-                      </Button>
-                    </Space>
-                    <Space>
-                      <Space direction="vertical">
-                        {item.values.map((value, valueIndex) => (
-                          <Space>
-                            <Input
-                              key={valueIndex}
-                              placeholder="Giá trị"
-                              size="large"
-                              defaultValue={value}
-                              onChange={(e) =>
-                                handleOptionValueChange(
-                                  optionIndex,
-                                  valueIndex,
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <Button
-                              shape="circle"
-                              onClick={() =>
-                                handleRemoveValue(item.name, value)
-                              }
-                            >
-                              <MinusCircleOutlined />
-                            </Button>
-                          </Space>
-                        ))}
-                      </Space>
-                      <Button
-                        shape="circle"
-                        onClick={() => handleCreateValue(item.name)}
-                      >
-                        <PlusCircleOutlined />
-                      </Button>
-                    </Space>
-                  </Space>
-                  <Divider />
-                </div>
-              ))}
-          </Space>
+          <OptionValueForm
+            disable={type === ProductModalType.UPDATE}
+            defaultValue={option}
+            onChange={handleOptionValueFormChange}
+          />
+        </div>
+        <div className={cx("form-wrapper")}>
+          <ProductVariantForm
+            defaultValue={variants}
+            onChange={handleProductVariantFormChange}
+          />
         </div>
       </Flex>
       {contextHolder}

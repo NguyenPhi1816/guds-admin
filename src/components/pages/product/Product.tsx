@@ -10,6 +10,7 @@ import {
   Input,
   message,
   Space,
+  Switch,
   Table,
   Tag,
   Typography,
@@ -30,8 +31,8 @@ import BrandModal, {
   BrandModalType,
 } from "@/components/modal/brand/BrandModal";
 import { ProductTableModalType } from "@/components/modal/productTableModal/ProductTableModal";
-import { BaseProduct } from "@/types/product";
-import { getAllProduct } from "@/services/product";
+import { BaseProduct, UpdateBaseProductStatusRequest } from "@/types/product";
+import { getAllProduct, updateBaseProductStatus } from "@/services/product";
 import { productStatus } from "@/constant/enum/productStatus";
 import ProductModal, {
   ProductModalType,
@@ -48,10 +49,10 @@ const ProductPage = () => {
   const [modalType, setModalType] = useState<ProductModalType>(
     ProductModalType.CREATE
   );
-  const [modalValue, setModalValue] = useState<Brand | null>(null);
+  const [currentBaseProductSlug, setCurrentBaseProductSlug] = useState<
+    string | null
+  >(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
-  const [currentCategorySlug, setCurrentCategorySlug] = useState<string>("");
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
@@ -91,16 +92,16 @@ const ProductPage = () => {
     setIsModalOpen(true);
   };
 
-  const showEditModal = (item: Brand) => {
-    setModalValue(item);
+  const showEditModal = (slug: string) => {
     setModalType(ProductModalType.UPDATE);
+    setCurrentBaseProductSlug(slug);
     setIsModalOpen(true);
   };
 
   const handleCancel = () => {
     setIsModalOpen(false);
     setModalType(ProductModalType.CREATE);
-    setModalValue(null);
+    setCurrentBaseProductSlug(null);
   };
 
   const handleRefresh = (message: string) => {
@@ -113,14 +114,18 @@ const ProductPage = () => {
     }
   };
 
-  const handleOpenProductModal = (slug: string) => {
-    setIsProductModalOpen(true);
-    setCurrentCategorySlug(slug);
-  };
-
-  const handleCancelProductModal = () => {
-    setIsProductModalOpen(false);
-    setCurrentCategorySlug("");
+  const handleChangeStatus = async (id: number, status: productStatus) => {
+    try {
+      const request: UpdateBaseProductStatusRequest = {
+        id,
+        status,
+      };
+      await updateBaseProductStatus(request);
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    }
   };
 
   return (
@@ -197,24 +202,29 @@ const ProductPage = () => {
         <Column title="Thương hiệu" dataIndex="brand" key="brand" />
         <Column
           title="Trạng thái"
-          dataIndex="status"
           key="status"
-          render={(status: string) => {
-            switch (status) {
-              case productStatus.ACTIVE: {
-                return <Badge status="success" text={status} />;
+          render={(_baseProduct: BaseProduct) => (
+            <Switch
+              defaultChecked={_baseProduct.status === productStatus.ACTIVE}
+              onChange={() =>
+                handleChangeStatus(
+                  _baseProduct.id,
+                  _baseProduct.status === productStatus.ACTIVE
+                    ? productStatus.INACTIVE
+                    : productStatus.ACTIVE
+                )
               }
-            }
-          }}
+            />
+          )}
         />
         <Column
           title="Hành động"
           key="action"
-          render={(_brand: Brand) => (
+          render={(_baseProduct: BaseProduct) => (
             <Button
               type="primary"
               className={cx("btn")}
-              onClick={() => showEditModal(_brand)}
+              onClick={() => showEditModal(_baseProduct.slug)}
             >
               <EditOutlined />
               Chỉnh sửa
@@ -225,13 +235,9 @@ const ProductPage = () => {
       <ProductModal
         type={modalType}
         open={isModalOpen}
+        slug={currentBaseProductSlug}
         onCancel={handleCancel}
-      />
-      <ProductTableModal
-        type={ProductTableModalType.BRAND}
-        slug={currentCategorySlug}
-        open={isProductModalOpen}
-        onCancel={handleCancelProductModal}
+        onRefresh={handleRefresh}
       />
       {contextHolder}
     </div>

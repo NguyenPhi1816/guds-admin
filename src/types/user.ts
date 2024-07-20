@@ -1,3 +1,5 @@
+import { AccountStatus } from "@/constant/enum/accountStatus";
+
 export type ProfileResponse = {
   id: number;
   firstName: string;
@@ -8,5 +10,11 @@ export type ProfileResponse = {
   dateOfBirth: string;
   image: string | null;
   email: string;
-  roles: string[];
+  status: string;
+  role: string;
+};
+
+export type UpdateUserStatusRequest = {
+  userId: number;
+  status: AccountStatus;
 };

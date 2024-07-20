@@ -4,7 +4,7 @@ import { ErrorResponse } from "@/types/error";
 export const uploadImages = async (files: File[]): Promise<UploadResponse> => {
   try {
     const formData = new FormData();
-    formData.append("file", files[0] as any);
+    files.forEach((file) => formData.append("file", file as any));
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_GUDS_API}/images/upload`,
       {

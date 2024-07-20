@@ -21,19 +21,12 @@ export const doCredentialLogin = async (formData: FormData) => {
           throw new Error("Tài khoản hoặc mật khẩu không chính xác");
         case "CallbackRouteError":
           throw new Error("Tài khoản hoặc mật khẩu không chính xác");
+        case "AccessDenied":
+          throw new Error("Bạn không có quyền truy cập trang này");
         default:
           return "Có lỗi xảy ra";
       }
     }
     throw error;
-  }
-};
-
-export const doRefreshToken = async (refresh_token: string) => {
-  try {
-    const token = await refreshToken(refresh_token);
-    return token;
-  } catch (error) {
-    throw new Error("Something went wrong");
   }
 };

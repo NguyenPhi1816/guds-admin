@@ -1,5 +1,7 @@
+import CustomerPage from "@/components/pages/customer/Customer";
+
 const Page = () => {
-  return <>This is customer page</>;
+  return <CustomerPage />;
 };
 
 export default Page;

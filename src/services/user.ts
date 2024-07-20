@@ -1,7 +1,8 @@
 "use server";
-import { ProfileResponse } from "@/types/user";
+import { ProfileResponse, UpdateUserStatusRequest } from "@/types/user";
 import { api } from "./api";
 import { ErrorResponse } from "@/types/error";
+import { getAccessToken } from "./auth";
 
 export const getProfile = async (accessToken: string) => {
   try {
@@ -19,6 +20,61 @@ export const getProfile = async (accessToken: string) => {
     }
 
     return profile ?? null;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getAllUser = async (): Promise<ProfileResponse[]> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const res = await fetch(`${api}/users`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + accessToken,
+        },
+        method: "GET",
+      });
+      const result: ProfileResponse[] | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
+      return result;
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateUserStatus = async (
+  updateUserStatusRequest: UpdateUserStatusRequest
+): Promise<ProfileResponse> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const res = await fetch(`${api}/users/status`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + accessToken,
+        },
+        method: "PUT",
+        body: JSON.stringify(updateUserStatusRequest),
+      });
+      const result: ProfileResponse | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
+      return result;
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
   } catch (error) {
     throw error;
   }

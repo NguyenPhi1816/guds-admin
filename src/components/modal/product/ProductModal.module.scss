@@ -19,6 +19,11 @@
   color: var(--black) !important;
 }
 
-.option-header {
+.header {
+  min-height: 2rem;
   margin-bottom: 1rem;
+}
+
+.m-0 {
+  margin: 0 !important;
 }

@@ -4,6 +4,7 @@ import { api } from "./api";
 import { auth } from "@/auth";
 import { ErrorResponse } from "@/types/error";
 import { ProductResponse } from "@/components/modal/productTableModal/ProductTableModal";
+import { getAccessToken } from "./auth";
 
 export const getAllBrand = async (): Promise<Brand[]> => {
   try {
@@ -39,9 +40,8 @@ export const getBrandProduct = async (
 
 export const createBrand = async (data: CreateBrandRequest): Promise<Brand> => {
   try {
-    const session = await auth();
-    if (session) {
-      const accessToken = session.user.access_token;
+    const accessToken = await getAccessToken();
+    if (accessToken) {
       const res = await fetch(`${api}/brands`, {
         headers: {
           "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export const createBrand = async (data: CreateBrandRequest): Promise<Brand> => {
 
       return result;
     } else {
-      throw new Error("No session");
+      throw new Error("Phiên làm việc hết hạn");
     }
   } catch (error) {
     throw error;
@@ -67,9 +67,8 @@ export const createBrand = async (data: CreateBrandRequest): Promise<Brand> => {
 
 export const updateBrand = async (data: UpdateBrandRequest): Promise<Brand> => {
   try {
-    const session = await auth();
-    if (session) {
-      const accessToken = session.user.access_token;
+    const accessToken = await getAccessToken();
+    if (accessToken) {
       const res = await fetch(`${api}/brands`, {
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +85,7 @@ export const updateBrand = async (data: UpdateBrandRequest): Promise<Brand> => {
 
       return result;
     } else {
-      throw new Error("No session");
+      throw new Error("Phiên làm việc hết hạn");
     }
   } catch (error) {
     throw error;

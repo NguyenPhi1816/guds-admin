@@ -1,5 +1,7 @@
+import Order from "@/components/pages/order";
+
 const Page = () => {
-  return <>This is order page</>;
+  return <Order />;
 };
 
 export default Page;

@@ -47,3 +47,7 @@ html *::-webkit-scrollbar-track {
 .ant-form-item-explain-error {
   margin: 0.25rem 0 0.5rem;
 }
+
+.ant-switch-checked {
+  background: var(--light-yellow) !important;
+}

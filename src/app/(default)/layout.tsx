@@ -3,6 +3,7 @@ import { Layout } from "antd";
 import { Content } from "antd/es/layout/layout";
 import Sidebar from "@/components/sidebar";
 import AppHeader from "@/components/header/Header";
+import SessionModal from "@/components/modal/sessionModal";
 
 export const metadata: Metadata = {
   icons: {
@@ -23,6 +24,7 @@ export default async function DefaultLayout({
       <Layout>
         <AppHeader />
         <Content>{children}</Content>
+        <SessionModal />
       </Layout>
     </Layout>
   );

@@ -1,13 +1,29 @@
 import credentials from "next-auth/providers/credentials";
-import { authenticate } from "./services/auth";
+import { authenticate, refreshToken } from "./services/auth";
 import { getProfile } from "./services/user";
 import NextAuth from "next-auth";
+import { UserRoles } from "./constant/enum/userRoles";
+import { AccountStatus } from "./constant/enum/accountStatus";
+
+function isTokenExpired(token: string) {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64").toString()
+    );
+    const exp = payload.exp * 1000;
+    return Date.now() > exp;
+  } catch (error) {
+    console.error("Invalid token", error);
+    return true;
+  }
+}
 
 export const {
   handlers: { GET, POST },
   auth,
   signIn,
   signOut,
+  unstable_update,
 } = NextAuth({
   providers: [
     credentials({
@@ -36,7 +52,8 @@ export const {
           name: profile.firstName + " " + profile.lastName,
           image: profile.image,
           email: profile.email,
-          roles: profile.roles,
+          role: profile.role,
+          status: profile.status,
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
         };
@@ -45,6 +62,15 @@ export const {
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      if (
+        user?.role !== UserRoles.ADMIN ||
+        user.status !== AccountStatus.ACTIVE
+      ) {
+        return false;
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       if (trigger === "update") {
         return {
@@ -56,6 +82,16 @@ export const {
     },
     async session({ session, token, user }) {
       session.user = token as any;
+
+      if (session.user.access_token) {
+        if (isTokenExpired(session.user.access_token)) {
+          const newToken = await refreshToken(session.user.refresh_token);
+          if (newToken) {
+            session.user.access_token = newToken.access_token;
+          }
+        }
+      }
+
       return session;
     },
   },

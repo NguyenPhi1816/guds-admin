@@ -5,7 +5,8 @@ declare module "next-auth" {
     name: string;
     image: string | null;
     email: string;
-    roles: string[];
+    role: string;
+    status: string;
     access_token: string;
     refresh_token: string;
   }
@@ -15,7 +16,8 @@ declare module "next-auth" {
       name: string;
       image: string | null;
       email: string;
-      roles: string[];
+      role: string;
+      status: string;
       access_token: string;
       refresh_token: string;
     };

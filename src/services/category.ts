@@ -8,6 +8,7 @@ import { api } from "./api";
 import { auth } from "@/auth";
 import { ErrorResponse } from "@/types/error";
 import { ProductResponse } from "@/components/modal/productTableModal/ProductTableModal";
+import { getAccessToken } from "./auth";
 
 export const getAllCategory = async (): Promise<CategoryResponse[]> => {
   try {
@@ -64,9 +65,8 @@ export const addCategory = async (
   data: AddCategoryRequest
 ): Promise<CategoryResponse> => {
   try {
-    const session = await auth();
-    if (session) {
-      const accessToken = session.user.access_token;
+    const accessToken = await getAccessToken();
+    if (accessToken) {
       const res = await fetch(`${api}/categories`, {
         headers: {
           "Content-Type": "application/json",
@@ -83,7 +83,7 @@ export const addCategory = async (
 
       return result;
     } else {
-      throw new Error("No session");
+      throw new Error("Phiên làm việc hết hạn");
     }
   } catch (error) {
     throw error;
@@ -94,9 +94,8 @@ export const editCategory = async (
   data: EditCategoryRequest
 ): Promise<CategoryResponse> => {
   try {
-    const session = await auth();
-    if (session) {
-      const accessToken = session.user.access_token;
+    const accessToken = await getAccessToken();
+    if (accessToken) {
       const res = await fetch(`${api}/categories`, {
         headers: {
           "Content-Type": "application/json",
@@ -113,7 +112,7 @@ export const editCategory = async (
 
       return result;
     } else {
-      throw new Error("No session");
+      throw new Error("Phiên làm việc hết hạn");
     }
   } catch (error) {
     throw error;

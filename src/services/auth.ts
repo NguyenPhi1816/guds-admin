@@ -1,3 +1,4 @@
+"use server";
 import {
   LoginRequest,
   LoginResponse,
@@ -5,6 +6,7 @@ import {
 } from "@/types/auth";
 import { api } from "./api";
 import { ErrorResponse } from "@/types/error";
+import { auth } from "@/auth";
 
 export const authenticate = async (
   request: LoginRequest
@@ -53,3 +55,49 @@ export const refreshToken = async (
     throw error;
   }
 };
+
+function isTokenExpired(token: string) {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64").toString()
+    );
+    const exp = payload.exp * 1000;
+    return Date.now() > exp;
+  } catch (error) {
+    console.error("Invalid token", error);
+    return true;
+  }
+}
+
+export async function getAccessToken(): Promise<string | undefined> {
+  try {
+    const session = await auth();
+    if (session) {
+      const accessToken = session.user.access_token;
+      const isAccessTokenExpire = isTokenExpired(accessToken);
+
+      if (!isAccessTokenExpire) {
+        return accessToken;
+      }
+
+      const _refreshToken = session.user.refresh_token;
+      const isRefreshTokenExpire = isTokenExpired(_refreshToken);
+
+      if (isRefreshTokenExpire) {
+        return undefined;
+      }
+
+      const result = await refreshToken(_refreshToken);
+
+      if (!result) {
+        return undefined;
+      }
+
+      return result.access_token;
+    } else {
+      return undefined;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
