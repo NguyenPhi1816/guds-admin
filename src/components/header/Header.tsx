@@ -43,11 +43,11 @@ const AppHeader = () => {
     <Header className={cx("header")}>
       <Flex className={cx("flex")} align="center" justify="end">
         <Space size={"large"}>
-          <Flex className={cx("flex", "mr-1")} align="center" justify="center">
+          {/* <Flex className={cx("flex", "mr-1")} align="center" justify="center">
             <Badge count={5}>
               <BellOutlined className={cx("icon")} />
             </Badge>
-          </Flex>
+          </Flex> */}
           <Flex className={cx("flex")} align="center" justify="center">
             {session && session.user && (
               <Dropdown menu={{ items }} placement="bottomLeft">

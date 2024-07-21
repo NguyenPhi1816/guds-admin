@@ -30,6 +30,7 @@ import { FilterDropdownProps } from "antd/es/table/interface";
 import { getAllOrder } from "@/services/order";
 import { Order } from "@/types/order";
 import { OrderStatus } from "@/constant/enum/orderStatus";
+import OrderDetailModal from "@/components/modal/orderDetailModal/OrderDetailModal";
 
 const cx = classNames.bind(styles);
 
@@ -39,11 +40,18 @@ const CustomerPage = () => {
   const [data, setData] = useState<Order[]>([]);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // search by order id
   const [searchValue, setSearchValue] = useState<string>("");
   const [searchResult, setSearchResult] = useState<Order[]>([]);
+
+  // search on column
   const [searchText, setSearchText] = useState("");
   const [searchedColumn, setSearchedColumn] = useState("");
   const searchInput = useRef<InputRef>(null);
+
+  const [openModal, setOpenModal] = useState<boolean>(false);
+  const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
@@ -70,7 +78,7 @@ const CustomerPage = () => {
   }, [refresh]);
 
   useEffect(() => {
-    if (data) {
+    if (data.length > 0) {
       const result = data.filter((item) => {
         return item.id.toString().includes(searchValue.toLowerCase());
       });
@@ -85,16 +93,6 @@ const CustomerPage = () => {
         type: "success",
         content: message,
       });
-    }
-  };
-
-  const handleUpdateStatus = async (id: number, status: AccountStatus) => {
-    try {
-      await updateUserStatus({ userId: id, status });
-    } catch (error) {
-      if (error instanceof Error) {
-        messageApi.error(error.message);
-      }
     }
   };
 
@@ -209,6 +207,15 @@ const CustomerPage = () => {
       ),
   });
 
+  const handleCancel = () => {
+    setOpenModal(false);
+  };
+
+  const handleOpenModal = (order: Order) => {
+    setCurrentOrder(order);
+    setOpenModal(true);
+  };
+
   return (
     <div className={cx("wrapper")}>
       <Title>Danh sách Đơn hàng</Title>
@@ -299,10 +306,14 @@ const CustomerPage = () => {
             switch (status) {
               case OrderStatus.PENDING:
                 return "Đang chờ xác nhận";
+              case OrderStatus.SHIPPING:
+                return "Đang giao hàng";
               case OrderStatus.SUCCESS:
                 return "Giao hàng thành công";
               case OrderStatus.CANCEL:
                 return "Đơn hàng đã hủy";
+              default:
+                return "Không xác định";
             }
           }}
         />
@@ -310,13 +321,24 @@ const CustomerPage = () => {
           title="Hành động"
           key="action"
           render={(order: Order) => (
-            <Button className={cx("btn")} type="primary">
+            <Button
+              className={cx("btn")}
+              type="primary"
+              onClick={() => handleOpenModal(order)}
+            >
               <EyeOutlined />
               Chi tiết
             </Button>
           )}
         />
       </Table>
+      {currentOrder && (
+        <OrderDetailModal
+          open={openModal}
+          onCancel={handleCancel}
+          data={currentOrder}
+        />
+      )}
       {contextHolder}
     </div>
   );

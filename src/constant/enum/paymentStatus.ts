@@ -1,6 +1,6 @@
-export enum OrderStatus {
+export enum PaymentStatus {
   PENDING = "PENDING",
-  SHIPPING = "SHIPPING",
   SUCCESS = "SUCCESS",
   CANCEL = "CANCEL",
+  REFUND = "REFUND",
 }

@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
+import Dashboard from "@/components/pages/dashboard";
 
 export default async function Home() {
-  return <>This is home page</>;
+  return <Dashboard />;
 }

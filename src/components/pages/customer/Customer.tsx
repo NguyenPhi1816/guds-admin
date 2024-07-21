@@ -67,7 +67,7 @@ const CustomerPage = () => {
   }, [refresh]);
 
   useEffect(() => {
-    if (data) {
+    if (data.length > 0) {
       const result = data.filter((item) => {
         return item.id.toString().includes(searchValue.toLowerCase());
       });

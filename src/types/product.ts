@@ -44,7 +44,6 @@ export type CreateOptionValueRequest = {
 export type ValuesResponse = {
   valueId: number;
   valueName: string;
-  valueStatus: string;
 };
 
 export type OptionValuesResponse = {

@@ -12,6 +12,7 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -30,16 +31,24 @@ function getItem(
 }
 
 const items: MenuItem[] = [
-  getItem(<a href="/">Trang chủ</a>, "/", <HomeOutlined />),
+  getItem(<Link href="/">Trang chủ</Link>, "/", <HomeOutlined />),
   getItem(
-    <a href="/category">Danh mục sản phẩm</a>,
+    <Link href="/category">Danh mục sản phẩm</Link>,
     "/category",
     <ProductOutlined />
   ),
-  getItem(<a href="/brand">Nhãn hàng</a>, "/brand", <TagsOutlined />),
-  getItem(<a href="/product">Sản phẩm</a>, "/product", <MobileOutlined />),
-  getItem(<a href="/customer">Khách hàng</a>, "/customer", <TeamOutlined />),
-  getItem(<a href="/order">Đơn hàng</a>, "/order", <TruckOutlined />),
+  getItem(<Link href="/brand">Nhãn hàng</Link>, "/brand", <TagsOutlined />),
+  getItem(
+    <Link href="/product">Sản phẩm</Link>,
+    "/product",
+    <MobileOutlined />
+  ),
+  getItem(
+    <Link href="/customer">Khách hàng</Link>,
+    "/customer",
+    <TeamOutlined />
+  ),
+  getItem(<Link href="/order">Đơn hàng</Link>, "/order", <TruckOutlined />),
 ];
 
 const cx = classNames.bind(styles);
@@ -50,14 +59,14 @@ const Sidebar = () => {
   return (
     <Sider width={"20vw"} className={cx("sidebar")}>
       <Flex align="center">
-        <a className={cx("logo")}>
+        <Link href="/dashboard" className={cx("logo")}>
           <Image
             src="./images/logo.png"
             preview={false}
             width={80}
             height={40}
           />
-        </a>
+        </Link>
       </Flex>
       <Menu
         className={cx("menu")}
