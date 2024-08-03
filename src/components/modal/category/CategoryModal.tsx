@@ -11,6 +11,7 @@ import {
 } from "@/types/category";
 import { addCategory, editCategory } from "@/services/category";
 import { uploadImages } from "@/services/upload";
+import TextArea from "antd/es/input/TextArea";
 
 export enum CategoryModalType {
   CREATE,
@@ -204,7 +205,8 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
           />
         </Form.Item>
         <Form.Item name="categoryDesc">
-          <Input
+          <TextArea
+            rows={4}
             placeholder="Mô tả"
             size="large"
             defaultValue={desc}

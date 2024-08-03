@@ -187,7 +187,12 @@ const CategoryPage = () => {
         />
         <Column title="Slug" dataIndex="slug" key="slug" />
         <Column title="Tên danh mục" dataIndex="name" key="name" />
-        <Column title="Mô tả" dataIndex="description" key="description" />
+        <Column
+          title="Mô tả"
+          dataIndex="description"
+          key="description"
+          ellipsis={true}
+        />
         <Column
           title="Danh mục cha"
           dataIndex="parent"

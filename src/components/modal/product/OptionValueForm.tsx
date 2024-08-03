@@ -23,6 +23,7 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
 }) => {
   const DEFAULT_OPTION_NAME = "Tùy chọn mới";
   const DEFAULT_VALUE_NAME = "Giá trị mới";
+  const [isChanged, setIsChanged] = useState<boolean>(false);
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -31,8 +32,10 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   }, [defaultValue]);
 
   useEffect(() => {
-    if (JSON.stringify(option) !== JSON.stringify(defaultValue))
+    if (isChanged) {
       onChange(option);
+      setIsChanged(false);
+    }
   }, [option]);
 
   const handleCreateOption = () => {
@@ -43,6 +46,7 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
       messageApi.error("Vui lòng nhập tùy chọn trước khi thêm tùy chọn mới");
       return;
     }
+    setIsChanged(true);
     setOption((prev) => {
       const newItem: OptionValuesRequest = {
         option: DEFAULT_OPTION_NAME,
@@ -53,6 +57,7 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   };
 
   const handleOptionNameChange = (index: number, value: string) => {
+    setIsChanged(true);
     setOption((prev) => {
       const newOptions = [...prev];
       newOptions[index] = { ...newOptions[index], option: value };
@@ -61,7 +66,10 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   };
 
   const handleRemoveOption = (optionName: string) => {
-    setOption((prev) => prev.filter((item) => item.option !== optionName));
+    setIsChanged(true);
+    setOption((prev) => {
+      return prev.filter((item) => item.option !== optionName);
+    });
   };
 
   const handleCreateValue = (optionName: string) => {
@@ -73,6 +81,7 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
       messageApi.error("Vui lòng nhập giá trị trước khi thêm giá trị mới");
       return;
     }
+    setIsChanged(true);
     setOption((prev) =>
       prev.map((item) =>
         item.option === optionName
@@ -87,6 +96,7 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
     valueIndex: number,
     value: string
   ) => {
+    setIsChanged(true);
     setOption((prev) => {
       const newOptions = [...prev];
       newOptions[optionIndex].values[valueIndex] = value;
@@ -95,16 +105,17 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   };
 
   const handleRemoveValue = (optionName: string, optionValue: string) => {
-    setOption((prev) =>
-      prev.map((item) =>
+    setIsChanged(true);
+    setOption((prev) => {
+      return prev.map((item) =>
         item.option === optionName
           ? {
               ...item,
               values: item.values.filter((value) => value !== optionValue),
             }
           : item
-      )
-    );
+      );
+    });
   };
 
   return (

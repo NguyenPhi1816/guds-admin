@@ -121,6 +121,7 @@ const ProductPage = () => {
         status,
       };
       await updateBaseProductStatus(request);
+      setRefresh(true);
     } catch (error) {
       if (error instanceof Error) {
         messageApi.error(error.message);

@@ -335,8 +335,9 @@ const CustomerPage = () => {
       {currentOrder && (
         <OrderDetailModal
           open={openModal}
-          onCancel={handleCancel}
           data={currentOrder}
+          onCancel={handleCancel}
+          onRefresh={handleRefresh}
         />
       )}
       {contextHolder}

@@ -29,6 +29,7 @@ interface IOrderDetailModal {
   open: boolean;
   data: Order;
   onCancel: () => void;
+  onRefresh: (message: string) => void;
 }
 
 const cx = classNames.bind(styles);
@@ -39,6 +40,7 @@ const OrderDetailModal: React.FC<IOrderDetailModal> = ({
   open,
   data,
   onCancel,
+  onRefresh,
 }) => {
   const [orderDetail, setOrderDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -64,6 +66,8 @@ const OrderDetailModal: React.FC<IOrderDetailModal> = ({
   }, [data]);
 
   const handleCancel = () => {
+    setOrderDetail(null);
+    setLoading(false);
     onCancel();
   };
 
@@ -73,6 +77,8 @@ const OrderDetailModal: React.FC<IOrderDetailModal> = ({
         setLoading(true);
         const res = await updateOrderStatus(orderDetail.id, status);
         setOrderDetail(res);
+        handleCancel();
+        onRefresh("Cập nhật trạng thái thành công");
       }
     } catch (error) {
       if (error instanceof Error) {
