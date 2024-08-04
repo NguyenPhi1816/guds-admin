@@ -9,44 +9,41 @@ import { OptionValuesRequest } from "@/types/product";
 const { Title } = Typography;
 
 interface IOptionValueForm {
-  disable: boolean;
-  defaultValue: OptionValuesRequest[];
-  onChange: (optionValues: OptionValuesRequest[]) => void;
+  disable?: boolean;
+  defaultValue?: OptionValuesRequest[];
+  onCancel: () => void;
+  onGoBack: () => void;
+  onSubmit: (optionValues: OptionValuesRequest[]) => void;
 }
 
 const cx = classNames.bind(styles);
 
 const OptionValueForm: React.FC<IOptionValueForm> = ({
-  disable,
-  defaultValue,
-  onChange,
+  disable = false,
+  defaultValue = undefined,
+  onCancel,
+  onGoBack,
+  onSubmit,
 }) => {
   const DEFAULT_OPTION_NAME = "Tùy chọn mới";
   const DEFAULT_VALUE_NAME = "Giá trị mới";
-  const [isChanged, setIsChanged] = useState<boolean>(false);
+
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
-  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
-    setOption(defaultValue);
-  }, [defaultValue]);
-
-  useEffect(() => {
-    if (isChanged) {
-      onChange(option);
-      setIsChanged(false);
+    if (defaultValue) {
+      setOption(defaultValue);
     }
-  }, [option]);
+  }, [defaultValue]);
 
   const handleCreateOption = () => {
     const defaultOptionExists = option.some(
       (item) => item.option === DEFAULT_OPTION_NAME
     );
     if (defaultOptionExists) {
-      messageApi.error("Vui lòng nhập tùy chọn trước khi thêm tùy chọn mới");
+      message.error("Vui lòng nhập tùy chọn trước khi thêm tùy chọn mới");
       return;
     }
-    setIsChanged(true);
     setOption((prev) => {
       const newItem: OptionValuesRequest = {
         option: DEFAULT_OPTION_NAME,
@@ -57,7 +54,6 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   };
 
   const handleOptionNameChange = (index: number, value: string) => {
-    setIsChanged(true);
     setOption((prev) => {
       const newOptions = [...prev];
       newOptions[index] = { ...newOptions[index], option: value };
@@ -66,7 +62,6 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   };
 
   const handleRemoveOption = (optionName: string) => {
-    setIsChanged(true);
     setOption((prev) => {
       return prev.filter((item) => item.option !== optionName);
     });
@@ -78,10 +73,9 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
         item.option === optionName && item.values.includes(DEFAULT_VALUE_NAME)
     );
     if (defaultValueExists) {
-      messageApi.error("Vui lòng nhập giá trị trước khi thêm giá trị mới");
+      message.error("Vui lòng nhập giá trị trước khi thêm giá trị mới");
       return;
     }
-    setIsChanged(true);
     setOption((prev) =>
       prev.map((item) =>
         item.option === optionName
@@ -96,7 +90,6 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
     valueIndex: number,
     value: string
   ) => {
-    setIsChanged(true);
     setOption((prev) => {
       const newOptions = [...prev];
       newOptions[optionIndex].values[valueIndex] = value;
@@ -105,7 +98,6 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
   };
 
   const handleRemoveValue = (optionName: string, optionValue: string) => {
-    setIsChanged(true);
     setOption((prev) => {
       return prev.map((item) =>
         item.option === optionName
@@ -116,6 +108,10 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
           : item
       );
     });
+  };
+
+  const handleSubmit = () => {
+    onSubmit(option);
   };
 
   return (
@@ -193,7 +189,15 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
             </div>
           ))}
       </Space>
-      {contextHolder}
+      <Flex justify="end">
+        <Space>
+          <Button onClick={onCancel} danger>
+            Hủy
+          </Button>
+          <Button onClick={onGoBack}>Quay lại</Button>
+          <Button onClick={handleSubmit}>Tiếp tục</Button>
+        </Space>
+      </Flex>
     </>
   );
 };

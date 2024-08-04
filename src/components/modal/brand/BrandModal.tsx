@@ -34,13 +34,14 @@ const BrandModal: React.FC<IBrandModal> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [name, setName] = useState<string>("");
+  const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     switch (type) {
       case BrandModalType.CREATE: {
         setTitle("Thêm nhãn hàng");
+        form.resetFields();
         break;
       }
       case BrandModalType.EDIT: {
@@ -48,19 +49,21 @@ const BrandModal: React.FC<IBrandModal> = ({
         break;
       }
     }
-  }, [type]);
+  }, [type, form]);
 
   useEffect(() => {
     if (value) {
       setImageUrl(value.image);
-      setName(value.name);
+      form.setFieldsValue({
+        brandName: value.name,
+      });
     }
-  }, [value]);
+  }, [value, form]);
 
   const handleCancel = () => {
-    setImageUrl("");
-    setName("");
+    form.resetFields();
     setImage(null);
+    setImageUrl(null);
     onCancel();
   };
 
@@ -74,13 +77,15 @@ const BrandModal: React.FC<IBrandModal> = ({
 
   const handleSubmit = async () => {
     try {
+      const values = await form.validateFields();
       setLoading(true);
+
       switch (type) {
         case BrandModalType.CREATE: {
           if (image) {
             const imageRes = await uploadImages([image]);
             const request: CreateBrandRequest = {
-              name,
+              name: values.brandName,
               image: imageRes.paths[0],
             };
             const data = await createBrand(request);
@@ -100,14 +105,14 @@ const BrandModal: React.FC<IBrandModal> = ({
               editedImageUrl = imageRes.paths[0];
               isChanged = true;
             }
-            if (name !== value.name) {
+            if (values.brandName !== value.name) {
               isChanged = true;
             }
 
             if (isChanged) {
               const request: UpdateBrandRequest = {
                 id: value.id,
-                name: name,
+                name: values.brandName,
                 image: editedImageUrl,
               };
               const data = await updateBrand(request);
@@ -153,22 +158,29 @@ const BrandModal: React.FC<IBrandModal> = ({
         </Button>,
       ]}
     >
-      <div className={cx("image-wrapper")}>
-        <ImageUpload defaultValue={imageUrl} onChange={handleImageChange} />
-      </div>
       <Form
-        name="AddCategory"
+        form={form}
+        name="AddBrand"
         layout="vertical"
         requiredMark="optional"
         className={cx("form")}
       >
-        <Form.Item name="categoryName">
-          <Input
-            placeholder="Tên danh mục"
-            size="large"
-            defaultValue={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <Form.Item
+          name="brandImage"
+          rules={[
+            {
+              required: type === BrandModalType.CREATE,
+              message: "Hình ảnh là bắt buộc",
+            },
+          ]}
+        >
+          <ImageUpload defaultValue={imageUrl} onChange={handleImageChange} />
+        </Form.Item>
+        <Form.Item
+          name="brandName"
+          rules={[{ required: true, message: "Tên nhãn hàng là bắt buộc" }]}
+        >
+          <Input placeholder="Tên nhãn hàng" size="large" />
         </Form.Item>
       </Form>
       {contextHolder}

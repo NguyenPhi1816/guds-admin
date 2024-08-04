@@ -3,7 +3,6 @@ import styles from "./Product.module.scss";
 import classNames from "classnames/bind";
 
 import {
-  Badge,
   Button,
   Flex,
   Form,
@@ -24,19 +23,11 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import Column from "antd/es/table/Column";
-import ProductTableModal from "@/components/modal/productTableModal";
-import { getAllBrand } from "@/services/brand";
-import { Brand } from "@/types/brand";
-import BrandModal, {
-  BrandModalType,
-} from "@/components/modal/brand/BrandModal";
-import { ProductTableModalType } from "@/components/modal/productTableModal/ProductTableModal";
 import { BaseProduct, UpdateBaseProductStatusRequest } from "@/types/product";
 import { getAllProduct, updateBaseProductStatus } from "@/services/product";
 import { productStatus } from "@/constant/enum/productStatus";
-import ProductModal, {
-  ProductModalType,
-} from "@/components/modal/product/ProductModal";
+import CreateProductModal from "@/components/modal/product/CreateProductModal";
+import UpdateProductModal from "@/components/modal/product/UpdateProductModal";
 
 const cx = classNames.bind(styles);
 
@@ -46,14 +37,12 @@ const ProductPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchValue, setSearchValue] = useState<string>("");
   const [searchResult, setSearchResult] = useState<BaseProduct[]>([]);
-  const [modalType, setModalType] = useState<ProductModalType>(
-    ProductModalType.CREATE
-  );
   const [currentBaseProductSlug, setCurrentBaseProductSlug] = useState<
     string | null
   >(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const fetcher = async () => {
@@ -88,19 +77,16 @@ const ProductPage = () => {
   }, [data, searchValue]);
 
   const showCreateModal = () => {
-    setModalType(ProductModalType.CREATE);
-    setIsModalOpen(true);
+    setCreateModalOpen(true);
   };
 
   const showEditModal = (slug: string) => {
-    setModalType(ProductModalType.UPDATE);
     setCurrentBaseProductSlug(slug);
-    setIsModalOpen(true);
+    setUpdateModalOpen(true);
   };
 
-  const handleCancel = () => {
-    setIsModalOpen(false);
-    setModalType(ProductModalType.CREATE);
+  const handleCancelUpdate = () => {
+    setUpdateModalOpen(false);
     setCurrentBaseProductSlug(null);
   };
 
@@ -233,13 +219,17 @@ const ProductPage = () => {
           )}
         />
       </Table>
-      <ProductModal
-        type={modalType}
-        open={isModalOpen}
-        slug={currentBaseProductSlug}
-        onCancel={handleCancel}
-        onRefresh={handleRefresh}
+      <CreateProductModal
+        open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
       />
+      {currentBaseProductSlug && (
+        <UpdateProductModal
+          open={updateModalOpen}
+          slug={currentBaseProductSlug}
+          onCancel={handleCancelUpdate}
+        />
+      )}
       {contextHolder}
     </div>
   );

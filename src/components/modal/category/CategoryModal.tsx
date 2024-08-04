@@ -1,7 +1,16 @@
 import styles from "./CategoryModel.module.scss";
 import classNames from "classnames/bind";
 
-import { Button, Form, Input, message, Modal, Select } from "antd";
+import {
+  Button,
+  Form,
+  Input,
+  message,
+  Modal,
+  Select,
+  Space,
+  Typography,
+} from "antd";
 import React, { useEffect, useState } from "react";
 import ImageUpload from "@/components/upload/ImageUpload";
 import {
@@ -12,6 +21,8 @@ import {
 import { addCategory, editCategory } from "@/services/category";
 import { uploadImages } from "@/services/upload";
 import TextArea from "antd/es/input/TextArea";
+
+const { Text } = Typography;
 
 export enum CategoryModalType {
   CREATE,
@@ -41,15 +52,14 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [name, setName] = useState<string>("");
-  const [desc, setDesc] = useState<string>("");
-  const [parentId, setParentId] = useState<number>(-1);
+  const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     switch (type) {
       case CategoryModalType.CREATE: {
         setTitle("Thêm danh mục");
+        form.resetFields();
         break;
       }
       case CategoryModalType.EDIT: {
@@ -57,33 +67,27 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
         break;
       }
     }
-  }, [type]);
+  }, [type, form]);
 
   useEffect(() => {
     if (value) {
       setImageUrl(value.image);
-      setName(value.name);
-      setDesc(value.description);
-      if (value.parent) {
-        setParentId(value.parent.id);
-      } else {
-        setParentId(-1);
-      }
+      form.setFieldsValue({
+        categoryName: value.name,
+        categoryDesc: value.description,
+        categoryParent: value.parent ? value.parent.id : -1,
+      });
     }
-  }, [value]);
+  }, [value, form]);
 
   const handleParentChange = (value: number) => {
-    if (value !== -1) {
-      setParentId(value);
-    }
+    form.setFieldsValue({ categoryParent: value });
   };
 
   const handleCancel = () => {
-    setImageUrl("");
-    setName("");
-    setDesc("");
-    setParentId(-1);
+    form.resetFields();
     setImage(null);
+    setImageUrl(null);
     onCancel();
   };
 
@@ -97,16 +101,19 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
 
   const handleSubmit = async () => {
     try {
+      const values = await form.validateFields();
+
       setLoading(true);
       switch (type) {
         case CategoryModalType.CREATE: {
           if (image) {
             const imageRes = await uploadImages([image]);
-            const myParentId = parentId === -1 ? null : parentId;
+            const myParentId =
+              values.categoryParent === -1 ? null : values.categoryParent;
             const request: AddCategoryRequest = {
-              name,
+              name: values.categoryName,
               image: imageRes.paths[0],
-              description: desc,
+              description: values.categoryDesc,
               parentId: myParentId,
             };
             const data = await addCategory(request);
@@ -126,22 +133,29 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
               editedImageUrl = imageRes.paths[0];
               isChanged = true;
             }
-            if (name !== value.name || desc !== value.description) {
+            if (
+              values.categoryName !== value.name ||
+              values.categoryDesc !== value.description
+            ) {
               isChanged = true;
             }
-            if (value.parent && parentId !== value.parent.id) {
+            if (value.parent && values.categoryParent !== value.parent.id) {
               isChanged = true;
-            } else if (!value.parent && parentId !== value.parent) {
+            } else if (
+              !value.parent &&
+              values.categoryParent !== value.parent
+            ) {
               isChanged = true;
             }
 
             if (isChanged) {
-              const myParentId = parentId === -1 ? null : parentId;
+              const myParentId =
+                values.categoryParent === -1 ? null : values.categoryParent;
               const request: EditCategoryRequest = {
                 id: value.id,
-                name: name,
+                name: values.categoryName,
                 image: editedImageUrl,
-                description: desc,
+                description: values.categoryDesc,
                 parentId: myParentId,
               };
               const data = await editCategory(request);
@@ -187,34 +201,40 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
         </Button>,
       ]}
     >
-      <div className={cx("image-wrapper")}>
-        <ImageUpload defaultValue={imageUrl} onChange={handleImageChange} />
-      </div>
       <Form
-        name="AddCategory"
+        form={form}
+        name="category"
         layout="vertical"
         requiredMark="optional"
         className={cx("form")}
       >
-        <Form.Item name="categoryName">
-          <Input
-            placeholder="Tên danh mục"
-            size="large"
-            defaultValue={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <Form.Item
+          name="categoryImage"
+          rules={[
+            {
+              required: type === CategoryModalType.CREATE,
+              message: "Hình ảnh là bắt buộc",
+            },
+          ]}
+        >
+          <ImageUpload defaultValue={imageUrl} onChange={handleImageChange} />
         </Form.Item>
-        <Form.Item name="categoryDesc">
-          <TextArea
-            rows={4}
-            placeholder="Mô tả"
-            size="large"
-            defaultValue={desc}
-            onChange={(e) => setDesc(e.target.value)}
-          />
+        <Form.Item
+          name="categoryName"
+          label="Tên danh mục"
+          rules={[{ required: true, message: "Tên danh mục là bắt buộc" }]}
+        >
+          <Input placeholder="Tên danh mục" size="large" />
         </Form.Item>
-        <Form.Item name="categoryParent">
-          <Select defaultValue={parentId} onChange={handleParentChange}>
+        <Form.Item
+          name="categoryDesc"
+          label="Mô tả"
+          rules={[{ required: true, message: "Mô tả là bắt buộc" }]}
+        >
+          <TextArea rows={4} placeholder="Mô tả" size="large" />
+        </Form.Item>
+        <Form.Item label="Danh mục cha" initialValue={-1} name="categoryParent">
+          <Select size="large" onChange={handleParentChange}>
             <Select.Option value={-1}>Không</Select.Option>
             {categories.map((category) => (
               <Select.Option key={category.id} value={category.id}>

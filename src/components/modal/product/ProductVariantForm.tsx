@@ -2,10 +2,24 @@ import styles from "./ProductModal.module.scss";
 import classNames from "classnames/bind";
 
 import ImageUpload from "@/components/upload/ImageUpload";
-import { Divider, Flex, Form, InputNumber, Space, Typography } from "antd";
+import {
+  Button,
+  Divider,
+  Flex,
+  Form,
+  InputNumber,
+  message,
+  Space,
+  Typography,
+} from "antd";
 import React, { useEffect, useState } from "react";
 
 const { Title, Text } = Typography;
+
+export enum ProductVariantFormType {
+  UPDATE,
+  CREATE,
+}
 
 export type Variant = {
   id: number | null;
@@ -17,20 +31,28 @@ export type Variant = {
 };
 
 interface IProductVariantForm {
-  defaultValue: Variant[];
-  onChange: (variants: Variant[]) => void;
+  type?: ProductVariantFormType;
+  defaultValue?: Variant[];
+  onSubmit: (variants: Variant[]) => void;
+  onCancel: () => void;
+  onGoBack: () => void;
 }
 
 const cx = classNames.bind(styles);
 
 const ProductVariantForm: React.FC<IProductVariantForm> = ({
-  defaultValue,
-  onChange,
+  type = ProductVariantFormType.CREATE,
+  defaultValue = undefined,
+  onSubmit,
+  onCancel,
+  onGoBack,
 }) => {
   const [variants, setVariants] = useState<Variant[]>([]);
 
   useEffect(() => {
-    setVariants(defaultValue);
+    if (defaultValue) {
+      setVariants(defaultValue);
+    }
   }, [defaultValue]);
 
   const handleVariantChange = (
@@ -40,9 +62,19 @@ const ProductVariantForm: React.FC<IProductVariantForm> = ({
   ) => {
     setVariants((prev) => {
       prev[index] = { ...prev[index], [key]: value };
-      onChange(prev);
       return prev;
     });
+  };
+
+  const handleSubmit = () => {
+    const isValidate = variants.reduce(
+      (prev, curr) => prev && !!curr.image,
+      true
+    );
+    if (type === ProductVariantFormType.CREATE && !isValidate) {
+      return message.error("Vui lòng nhập đầy đủ thông tin");
+    }
+    onSubmit(variants);
   };
 
   return (
@@ -71,16 +103,19 @@ const ProductVariantForm: React.FC<IProductVariantForm> = ({
               <Space align="end">
                 <ImageUpload
                   defaultValue={variant.imageUrl}
-                  onChange={(file) => handleVariantChange(index, "image", file)}
+                  onChange={(file, url) => {
+                    handleVariantChange(index, "image", file);
+                    handleVariantChange(index, "imageUrl", url as string);
+                  }}
                 />
                 <Space direction="vertical">
                   <Form.Item name="price" label="Giá" className={cx("m-0")}>
                     <InputNumber
                       controls={false}
                       min={1000}
-                      defaultValue={1000}
+                      prefix="₫"
                       formatter={(value) =>
-                        `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }
                       style={{ width: "100%" }}
                       onChange={(value) =>
@@ -109,6 +144,15 @@ const ProductVariantForm: React.FC<IProductVariantForm> = ({
           </div>
         );
       })}
+      <Flex justify="end">
+        <Space>
+          <Button onClick={onCancel} danger>
+            Hủy
+          </Button>
+          <Button onClick={onGoBack}>Quay lại</Button>
+          <Button onClick={handleSubmit}>Tiếp tục</Button>
+        </Space>
+      </Flex>
     </>
   );
 };

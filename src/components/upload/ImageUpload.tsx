@@ -25,7 +25,7 @@ const beforeUpload = (file: FileType) => {
 
 interface IImageUpload {
   defaultValue?: string | null;
-  onChange: (file: File) => void;
+  onChange: (file: File, imageUrl?: string) => void;
 }
 
 const ImageUpload: React.FC<IImageUpload> = ({ defaultValue, onChange }) => {
@@ -52,7 +52,9 @@ const ImageUpload: React.FC<IImageUpload> = ({ defaultValue, onChange }) => {
   };
 
   const uploadAction = (file: File) => {
-    onChange(file);
+    getBase64(file as FileType, (url) => {
+      onChange(file, url);
+    });
     return "";
   };
 

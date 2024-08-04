@@ -3,14 +3,13 @@
 }
 
 .form-wrapper {
-  max-height: 80vh;
-  width: 33%;
+  height: 80vh;
+  width: 100%;
   overflow: scroll;
-  padding: 0 0.25rem;
-  margin: 0 1rem;
 }
 
 .quill {
+  margin-bottom: 2.5rem;
   height: 500px;
 }
 
