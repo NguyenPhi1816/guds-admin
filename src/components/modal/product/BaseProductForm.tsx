@@ -110,8 +110,6 @@ const BaseProductForm: React.FC<IBaseProductForm> = ({
       });
   };
 
-  console.log(type === BaseProductFormType.CREATE);
-
   return (
     <Form
       form={form}
@@ -190,13 +188,28 @@ const BaseProductForm: React.FC<IBaseProductForm> = ({
       <Form.Item
         name="brand"
         label="Nhãn hàng"
-        rules={[{ required: true, message: "Vui lòng chọn nhãn hàng" }]}
+        rules={[
+          { required: true, message: "Vui lòng chọn nhãn hàng" },
+          {
+            validator: (_, value) => {
+              if (value === -1) {
+                return Promise.reject(
+                  new Error("Vui lòng chọn một nhãn hàng hợp lệ")
+                );
+              }
+              return Promise.resolve();
+            },
+          },
+        ]}
       >
         <Select
           size="large"
           placeholder="Vui lòng chọn nhãn hàng"
           onChange={(value) => setBrandId(value)}
         >
+          <Select.Option value={-1} disabled>
+            Chọn một nhãn hàng
+          </Select.Option>
           {brands.map((brand) => (
             <Select.Option key={brand.id} value={brand.id}>
               {brand.name}
