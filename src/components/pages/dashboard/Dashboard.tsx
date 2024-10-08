@@ -1,8 +1,9 @@
 "use client";
 import styles from "./Dashboard.module.scss";
 import classNames from "classnames/bind";
-import { Flex, Typography } from "antd";
+import { Flex, Space, Typography } from "antd";
 import { useSession } from "next-auth/react";
+import CustomBarChart from "@/components/charts/MonthlyRevenue";
 
 const { Title } = Typography;
 
@@ -17,13 +18,12 @@ const Dashboard: React.FC = () => {
         className={cx("dashboard-flex")}
         vertical
         justify="center"
-        align="center"
+        align="flex-start"
       >
-        <div className={cx("dashboard-logo")}>
-          <img src="/images/logo.png" />
+        <div style={{ width: "100%", height: "100%", padding: "0 5rem" }}>
+          <Title>Thống kê doanh thu theo tháng</Title>
+          <CustomBarChart />
         </div>
-        <Title>Chào mừng quay trở lại</Title>
-        <Title level={3}>{session?.user.name}</Title>
       </Flex>
     </div>
   );

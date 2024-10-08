@@ -8,11 +8,12 @@ export type Brand = {
 
 export type CreateBrandRequest = {
   name: string;
-  image: string;
+  image: File;
 };
 
 export type UpdateBrandRequest = {
   id: number;
   name: string;
-  image: string;
+  existImage: string;
+  newImage: File | null;
 };

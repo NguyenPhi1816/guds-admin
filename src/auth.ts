@@ -1,22 +1,6 @@
 import credentials from "next-auth/providers/credentials";
-import { authenticate, refreshToken } from "./services/auth";
-import { getProfile } from "./services/user";
+import { authenticate } from "./services/auth";
 import NextAuth from "next-auth";
-import { UserRoles } from "./constant/enum/userRoles";
-import { AccountStatus } from "./constant/enum/accountStatus";
-
-function isTokenExpired(token: string) {
-  try {
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64").toString()
-    );
-    const exp = payload.exp * 1000;
-    return Date.now() > exp;
-  } catch (error) {
-    console.error("Invalid token", error);
-    return true;
-  }
-}
 
 export const {
   handlers: { GET, POST },
@@ -29,67 +13,46 @@ export const {
     credentials({
       name: "Credentials",
       credentials: {
-        phoneNumber: { type: "text" },
-        password: { type: "password" },
+        phoneNumber: {
+          label: "Phone Number",
+          type: "text",
+          placeholder: "Phone Number",
+        },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         const { phoneNumber, password } = credentials;
 
-        const tokens = await authenticate({
+        const response = await authenticate({
           phoneNumber: phoneNumber as string,
           password: password as string,
         });
-        if (!tokens) {
-          return null;
-        }
-        const profile = await getProfile(tokens.access_token);
-        if (!profile) {
+
+        if (!response) {
           return null;
         }
 
-        const response = {
-          id: profile.id.toString(),
-          name: profile.firstName + " " + profile.lastName,
-          image: profile.image,
-          email: profile.email,
-          role: profile.role,
-          status: profile.status,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-        };
         return response;
       },
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
-      if (
-        user?.role !== UserRoles.ADMIN ||
-        user.status !== AccountStatus.ACTIVE
-      ) {
-        return false;
+    async jwt({ token, user }) {
+      if (!!user) {
+        token.accessToken = user.accessToken;
+        token.expires = user.expires;
+        token.user = user.user;
+        token.provider = user.provider;
+        token.providerAccountId = user.providerAccountId;
       }
-      return true;
+      return token;
     },
-    async jwt({ token, user, trigger, session }) {
-      if (trigger === "update") {
-        return {
-          ...token,
-          ...session.user,
-        };
-      }
-      return { ...token, ...user };
-    },
-    async session({ session, token, user }) {
+    async session({ session, token }) {
       session.user = token as any;
 
-      if (session.user.access_token) {
-        if (isTokenExpired(session.user.access_token)) {
-          const newToken = await refreshToken(session.user.refresh_token);
-          if (newToken) {
-            session.user.access_token = newToken.access_token;
-          }
-        }
+      if (Date.now() > new Date(token.expires as Date).getTime()) {
+        console.log("session expired.");
+        session.expires = "expired" as Date & string;
       }
 
       return session;

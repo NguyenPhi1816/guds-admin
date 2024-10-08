@@ -67,6 +67,15 @@ export const addCategory = async (
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
+      const formData = new FormData();
+
+      formData.append("name", data.name);
+      formData.append("image", data.image);
+      formData.append("description", data.description);
+      if (!!data.parentId) {
+        formData.append("parentId", data.parentId.toString());
+      }
+
       const res = await fetch(`${api}/categories`, {
         headers: {
           "Content-Type": "application/json",

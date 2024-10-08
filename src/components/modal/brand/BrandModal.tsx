@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import ImageUpload from "@/components/upload/ImageUpload";
 import { uploadImages } from "@/services/upload";
 import { Brand, CreateBrandRequest, UpdateBrandRequest } from "@/types/brand";
-import { createBrand, updateBrand } from "@/services/brand";
+import { createBrand, updateBrand } from "@/services/brand-client";
 
 export enum BrandModalType {
   CREATE,
@@ -83,10 +83,9 @@ const BrandModal: React.FC<IBrandModal> = ({
       switch (type) {
         case BrandModalType.CREATE: {
           if (image) {
-            const imageRes = await uploadImages([image]);
             const request: CreateBrandRequest = {
               name: values.brandName,
-              image: imageRes.paths[0],
+              image: image,
             };
             const data = await createBrand(request);
             if (data) {
@@ -99,10 +98,7 @@ const BrandModal: React.FC<IBrandModal> = ({
         case BrandModalType.EDIT: {
           if (value) {
             let isChanged = false;
-            let editedImageUrl = value.image;
             if (image) {
-              const imageRes = await uploadImages([image]);
-              editedImageUrl = imageRes.paths[0];
               isChanged = true;
             }
             if (values.brandName !== value.name) {
@@ -113,7 +109,8 @@ const BrandModal: React.FC<IBrandModal> = ({
               const request: UpdateBrandRequest = {
                 id: value.id,
                 name: values.brandName,
-                image: editedImageUrl,
+                existImage: value.image,
+                newImage: image,
               };
               const data = await updateBrand(request);
               if (data) {

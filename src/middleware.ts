@@ -8,23 +8,18 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const { nextUrl } = req;
+  const pathname = "/" + nextUrl.pathname.split("/")[1];
+
   const isAuthenticated = !!req.auth;
-  const isPublicRoute = PUBLIC_ROUTES.includes(nextUrl.pathname);
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
 
   if (!isPublicRoute && !isAuthenticated) {
     console.log("Unauthorized");
     return NextResponse.redirect(new URL(DEFAULT_REDIRECT, nextUrl));
-  }
-
-  if (
-    !isPublicRoute &&
-    isAuthenticated &&
-    nextUrl.pathname !== REFRESH_TOKEN_REDIRECT
-  ) {
-    const authentication = req.auth;
-    if (!authentication) {
-      return NextResponse.redirect(new URL(DEFAULT_REDIRECT, nextUrl));
-    }
   }
 
   return NextResponse.next();

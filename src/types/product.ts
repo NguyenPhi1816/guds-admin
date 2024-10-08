@@ -14,7 +14,7 @@ export type CreateBaseProductRequest = {
   description: string;
   categoryIds: number[];
   brandId: number;
-  images: string[];
+  images: File[];
 };
 
 export type UpdateBaseProductRequest = {
@@ -55,7 +55,7 @@ export type OptionValuesResponse = {
 
 export type CreateProductVariantRequest = {
   baseProductId: number;
-  image: string;
+  image: File;
   quantity: number;
   price: number;
   optionValueIds: number[];

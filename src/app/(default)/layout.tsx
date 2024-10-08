@@ -24,7 +24,7 @@ export default async function DefaultLayout({
       <Layout>
         <AppHeader />
         <Content>{children}</Content>
-        <SessionModal />
+        {/* <SessionModal /> */}
       </Layout>
     </Layout>
   );

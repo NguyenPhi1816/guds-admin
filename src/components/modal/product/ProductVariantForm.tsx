@@ -144,15 +144,6 @@ const ProductVariantForm: React.FC<IProductVariantForm> = ({
           </div>
         );
       })}
-      <Flex justify="end">
-        <Space>
-          <Button onClick={onCancel} danger>
-            Hủy
-          </Button>
-          <Button onClick={onGoBack}>Quay lại</Button>
-          <Button onClick={handleSubmit}>Tiếp tục</Button>
-        </Space>
-      </Flex>
     </>
   );
 };

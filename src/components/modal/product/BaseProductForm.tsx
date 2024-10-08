@@ -20,8 +20,6 @@ interface IBaseProductForm {
   type?: BaseProductFormType;
   value?: CreateBaseProductRequest;
   imageFiles?: File[];
-  onCancel: () => void;
-  onSubmit: (baseProduct: CreateBaseProductRequest, images: File[]) => void;
 }
 
 const cx = classNames.bind(styles);
@@ -30,8 +28,6 @@ const BaseProductForm: React.FC<IBaseProductForm> = ({
   type = BaseProductFormType.CREATE,
   value = undefined,
   imageFiles = undefined,
-  onCancel,
-  onSubmit,
 }) => {
   const [form] = Form.useForm();
   const INITIAL_IMAGES = [null, null, null];
@@ -228,24 +224,6 @@ const BaseProductForm: React.FC<IBaseProductForm> = ({
           placeholder="Vui lòng nhập mô tả"
           onChange={(value) => setDesc(value)}
         />
-      </Form.Item>
-      <Form.Item>
-        <Flex justify="end">
-          <Space>
-            <Button
-              danger
-              onClick={(e) => {
-                e.preventDefault();
-                onCancel();
-              }}
-            >
-              Hủy
-            </Button>
-            <Button htmlType="submit" type="primary">
-              Tiếp tục
-            </Button>
-          </Space>
-        </Flex>
       </Form.Item>
     </Form>
   );

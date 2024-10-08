@@ -1,42 +1,6 @@
-"use server";
 import { Brand, CreateBrandRequest, UpdateBrandRequest } from "@/types/brand";
-import { api } from "./api";
-import { auth } from "@/auth";
-import { ErrorResponse } from "@/types/error";
-import { ProductResponse } from "@/components/modal/productTableModal/ProductTableModal";
 import { getAccessToken } from "./auth";
-
-export const getAllBrand = async (): Promise<Brand[]> => {
-  try {
-    const res = await fetch(`${api}/brands`);
-    const data: Brand[] | ErrorResponse = await res.json();
-
-    if ("error" in data) {
-      throw new Error(data.message);
-    }
-
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const getBrandProduct = async (
-  slug: string
-): Promise<ProductResponse[]> => {
-  try {
-    const res = await fetch(`${api}/brands/product/${slug}`);
-    let data: ProductResponse[] | ErrorResponse = await res.json();
-
-    if ("error" in data) {
-      throw new Error(data.message);
-    }
-
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
+import { ErrorResponse } from "@/types/error";
 
 export const createBrand = async (data: CreateBrandRequest): Promise<Brand> => {
   try {
@@ -47,7 +11,7 @@ export const createBrand = async (data: CreateBrandRequest): Promise<Brand> => {
     formData.append("image", data.image);
 
     if (accessToken) {
-      const res = await fetch(`${api}/brands`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_GUDS_API}/brands`, {
         headers: {
           Authorization: "Bearer " + accessToken,
         },
@@ -83,7 +47,7 @@ export const updateBrand = async (data: UpdateBrandRequest): Promise<Brand> => {
         formData.append("newImage", data.newImage);
       }
 
-      const res = await fetch(`${api}/brands`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_GUDS_API}/brands`, {
         headers: {
           Authorization: "Bearer " + accessToken,
         },

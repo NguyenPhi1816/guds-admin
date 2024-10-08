@@ -17,7 +17,7 @@ export type CategoryResponse = {
 
 export type AddCategoryRequest = {
   name: string;
-  image: string;
+  image: File;
   description: string;
   parentId: number | null;
 };
@@ -25,7 +25,8 @@ export type AddCategoryRequest = {
 export type EditCategoryRequest = {
   id: number;
   name: string;
-  image: string;
+  existImage: string;
+  newImage: File | null;
   description: string;
   parentId: number | null;
 };

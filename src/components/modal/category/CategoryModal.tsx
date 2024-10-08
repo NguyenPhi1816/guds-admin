@@ -18,9 +18,8 @@ import {
   CategoryResponse,
   EditCategoryRequest,
 } from "@/types/category";
-import { addCategory, editCategory } from "@/services/category";
-import { uploadImages } from "@/services/upload";
 import TextArea from "antd/es/input/TextArea";
+import { addCategory, editCategory } from "@/services/category-client";
 
 const { Text } = Typography;
 
@@ -107,12 +106,11 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
       switch (type) {
         case CategoryModalType.CREATE: {
           if (image) {
-            const imageRes = await uploadImages([image]);
             const myParentId =
               values.categoryParent === -1 ? null : values.categoryParent;
             const request: AddCategoryRequest = {
               name: values.categoryName,
-              image: imageRes.paths[0],
+              image: image,
               description: values.categoryDesc,
               parentId: myParentId,
             };
@@ -127,10 +125,7 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
         case CategoryModalType.EDIT: {
           if (value) {
             let isChanged = false;
-            let editedImageUrl = value.image;
             if (image) {
-              const imageRes = await uploadImages([image]);
-              editedImageUrl = imageRes.paths[0];
               isChanged = true;
             }
             if (
@@ -154,7 +149,8 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
               const request: EditCategoryRequest = {
                 id: value.id,
                 name: values.categoryName,
-                image: editedImageUrl,
+                existImage: value.image,
+                newImage: image,
                 description: values.categoryDesc,
                 parentId: myParentId,
               };

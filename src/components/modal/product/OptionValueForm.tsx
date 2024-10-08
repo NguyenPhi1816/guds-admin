@@ -189,15 +189,6 @@ const OptionValueForm: React.FC<IOptionValueForm> = ({
             </div>
           ))}
       </Space>
-      <Flex justify="end">
-        <Space>
-          <Button onClick={onCancel} danger>
-            Hủy
-          </Button>
-          <Button onClick={onGoBack}>Quay lại</Button>
-          <Button onClick={handleSubmit}>Tiếp tục</Button>
-        </Space>
-      </Flex>
     </>
   );
 };
