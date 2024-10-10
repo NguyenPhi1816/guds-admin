@@ -36,3 +36,9 @@
 .tags-input .borderless-tags-input:focus + .tags-input {
   border-color: #4096ff;
 }
+
+.variants {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, calc(40%));
+  grid-gap: 1rem;
+}

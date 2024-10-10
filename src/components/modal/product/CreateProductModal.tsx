@@ -9,11 +9,13 @@ import {
   Flex,
   Form,
   Input,
+  InputNumber,
   message,
   Modal,
   Select,
   Space,
   Tag,
+  Typography,
   Upload,
   UploadFile,
 } from "antd";
@@ -26,6 +28,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import {
   DeleteOutlined,
+  ExclamationCircleFilled,
   MinusCircleOutlined,
   PlusCircleOutlined,
   UploadOutlined,
@@ -33,13 +36,20 @@ import {
 import {
   CreateBaseProductRequest,
   CreateOptionValueRequest,
+  CreateProductVariantRequest,
   OptionValuesRequest,
   OptionValuesResponse,
+  ValuesResponse,
 } from "@/types/product";
-import { createBaseProduct } from "@/services/products-client";
+import {
+  createBaseProduct,
+  createProductVariant,
+} from "@/services/products-client";
 import { createOptionValues } from "@/services/product";
+import ImageUpload from "@/components/upload";
 
 const { confirm } = Modal;
+const { Title, Text } = Typography;
 
 interface ICreateProductModal {
   open: boolean;
@@ -50,6 +60,15 @@ const cx = classNames.bind(styles);
 
 const DEFAULT_OPTION_NAME = "";
 const DEFAULT_VALUE_NAME = "";
+
+export type Variant = {
+  id: number | null;
+  image: File | null;
+  imageUrl: string;
+  quantity: number | undefined;
+  price: number | undefined;
+  optionValues: string[];
+};
 
 const CreateProductModal: React.FC<ICreateProductModal> = ({
   open,
@@ -69,6 +88,7 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
   >([]);
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
   const [valueArr, setValueArr] = useState<string[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
 
   // Load categories and brands from database
   useEffect(() => {
@@ -81,7 +101,47 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
     fetcher();
   }, []);
 
-  const handleCancel = () => {};
+  useEffect(() => {
+    generateVariants();
+  }, [option]);
+
+  const handleCancel = () => {
+    confirm({
+      title: "Đóng cửa sổ thêm sản phẩm",
+      icon: <ExclamationCircleFilled />,
+      content:
+        "Bạn có muốn đóng cửa không? Nếu có, dữ liệu trong cửa sổ sẽ biến mất",
+      okText: "Đóng",
+      okType: "danger",
+      cancelText: "Không",
+      onOk() {
+        setName("");
+        setDesc("");
+        setCategoryIds([]);
+        setBaseProductImages([]);
+        setBrandId(undefined);
+        setOption([]);
+        setVariants([]);
+        setValueArr([]);
+        onCancel();
+      },
+      onCancel() {
+        console.log("Cancel");
+      },
+    });
+  };
+
+  const handleCancelWithoutConfirm = () => {
+    setName("");
+    setDesc("");
+    setCategoryIds([]);
+    setBaseProductImages([]);
+    setBrandId(undefined);
+    setOption([]);
+    setVariants([]);
+    setValueArr([]);
+    onCancel();
+  };
 
   // Handle Option Values
   const handleCreateOption = () => {
@@ -147,46 +207,121 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
     });
   };
 
+  const generateCombinations = (options: OptionValuesRequest[]): string[][] => {
+    const results: string[][] = [];
+    const generate = (current: string[], depth: number) => {
+      if (depth === options.length) {
+        results.push(current);
+        return;
+      }
+      for (const value of options[depth].values) {
+        generate([...current, value], depth + 1);
+      }
+    };
+    generate([], 0);
+    return results;
+  };
+
+  const generateVariants = () => {
+    const allCombinations = generateCombinations(option);
+    const initialVariants: Variant[] = allCombinations.map((combination) => ({
+      id: null,
+      image: null,
+      imageUrl: "",
+      price: undefined,
+      quantity: undefined,
+      optionValues: combination,
+    }));
+    setVariants(initialVariants);
+  };
   // End of Handle Option Values
 
+  // Start of Handle Product Variant
+  const handleVariantChange = (
+    index: number,
+    key: keyof Variant,
+    value: any
+  ) => {
+    setVariants((prev) => {
+      prev[index] = { ...prev[index], [key]: value };
+      return prev;
+    });
+  };
+  // End of Handle Product Variant
+
   const handleCreateProduct = async () => {
-    if (brandId) {
-      let isValid = true;
-      // Create Base Product
-      // Extract Files
-      const files: File[] = baseProductImages
-        .filter((file) => !!file.originFileObj)
-        .map((file) => file.originFileObj as File);
-      const createBaseProductRequest: CreateBaseProductRequest = {
-        name: name,
-        description: desc,
-        categoryIds: categoryIds,
-        brandId: brandId,
-        images: files,
-      };
-      const newBaseProduct = await createBaseProduct(createBaseProductRequest);
-      isValid = !!newBaseProduct;
-      if (!isValid) {
-        throw new Error("Có lỗi xảy ra trong quá trình thêm sản phẩm");
-      }
-      // End of Create Base Product
-
-      // Create Option Values
-      const createOptionValuesRequest: CreateOptionValueRequest = {
-        baseProductId: newBaseProduct.id,
-        optionValues: option,
-      };
-
-      const optionValuesResponse: OptionValuesResponse[] =
-        await createOptionValues(createOptionValuesRequest);
-      isValid = !!optionValuesResponse;
-      if (!isValid) {
-        throw new Error(
-          "Có lỗi xảy ra trong quá trình thêm tùy chọn cho sản phẩm"
+    await form.validateFields().then(async () => {
+      if (brandId) {
+        let isValid = true;
+        // Create Base Product
+        // Extract Files
+        const files: File[] = baseProductImages
+          .filter((file) => !!file.originFileObj)
+          .map((file) => file.originFileObj as File);
+        const createBaseProductRequest: CreateBaseProductRequest = {
+          name: name,
+          description: desc,
+          categoryIds: categoryIds,
+          brandId: brandId,
+          images: files,
+        };
+        const newBaseProduct = await createBaseProduct(
+          createBaseProductRequest
         );
+        isValid = !!newBaseProduct;
+        if (!isValid) {
+          throw new Error("Có lỗi xảy ra trong quá trình thêm sản phẩm");
+        }
+        // End of Create Base Product
+
+        // Create Option Values
+        const createOptionValuesRequest: CreateOptionValueRequest = {
+          baseProductId: newBaseProduct.id,
+          optionValues: option,
+        };
+
+        const optionValuesResponse: OptionValuesResponse[] =
+          await createOptionValues(createOptionValuesRequest);
+        isValid = !!optionValuesResponse;
+        if (!isValid) {
+          throw new Error(
+            "Có lỗi xảy ra trong quá trình thêm tùy chọn cho sản phẩm"
+          );
+        }
+        const values: ValuesResponse[] = optionValuesResponse.reduce(
+          (prev, curr) => [...prev, ...curr.values],
+          [] as ValuesResponse[]
+        );
+        // End of Create Option Values
+        // Create Product Variant
+        const createProductVariantPromises = variants.map((variant, index) => {
+          const _optionValueIds: number[] = [];
+          for (let value of variant.optionValues) {
+            const _myValue = values.find((v) => v.valueName === value);
+            if (_myValue) {
+              _optionValueIds.push(_myValue.valueId);
+            }
+          }
+          const request: CreateProductVariantRequest = {
+            baseProductId: newBaseProduct.id,
+            image: variant.image as File,
+            optionValueIds: _optionValueIds,
+            price: variant.price ?? 0,
+            quantity: variant.quantity ?? 0,
+          };
+          return createProductVariant(request);
+        });
+        const productVariants = await Promise.all(createProductVariantPromises);
+        isValid = !!productVariants;
+        if (!isValid) {
+          throw new Error(
+            "Có lỗi xảy ra trong quá trình thêm biến thể sản phẩm"
+          );
+        }
+        // End of Create Product Variant
+        handleCancelWithoutConfirm();
       }
-      // End of Create Option Values
-    }
+    });
   };
 
   return (
@@ -197,6 +332,7 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
       onCancel={() => handleCancel()}
       footer={[]}
       className={cx("modal")}
+      afterClose={() => form.resetFields()}
     >
       <Flex vertical>
         <Form
@@ -213,7 +349,7 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
               {
                 required: true,
                 validator: (_, value) =>
-                  baseProductImages.filter((img) => img).length >= 3
+                  baseProductImages.length >= 2
                     ? Promise.resolve()
                     : Promise.reject(
                         new Error("Vui lòng tải lên đủ 3 hình ảnh")
@@ -302,11 +438,7 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
               </Select>
             </Form.Item>
           </Flex>
-          <Form.Item
-            name="option-value"
-            label="Tùy chọn - giá trị tùy chọn"
-            rules={[{ required: true, message: "Vui lòng chọn nhãn hàng" }]}
-          >
+          <Form.Item name="option-value" label="Tùy chọn - giá trị tùy chọn">
             <Flex vertical>
               <Space direction="vertical">
                 {option.length > 0 &&
@@ -381,6 +513,64 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
               </Button>
             </Flex>
           </Form.Item>
+          {variants.map((variant, index) => {
+            const valuesStr =
+              variant.optionValues.length === 0
+                ? "Mặc định"
+                : variant.optionValues.join(", ");
+            return (
+              <Form.Item
+                key={Math.random()}
+                name={`variant-${index}`}
+                label={`Tùy chọn: ${valuesStr}`}
+                rules={[
+                  {
+                    required: true,
+                    validator: (_, value) =>
+                      variants[index] != null
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            new Error("Vui lòng tải lên đủ 3 hình ảnh")
+                          ),
+                  },
+                ]}
+              >
+                <Flex gap={16} align="center">
+                  <ImageUpload
+                    defaultValue={variant.imageUrl}
+                    onChange={(file, url) => {
+                      handleVariantChange(index, "image", file);
+                      handleVariantChange(index, "imageUrl", url);
+                    }}
+                  />
+                  <InputNumber
+                    defaultValue={variant.price}
+                    controls={false}
+                    min={1000}
+                    formatter={(value) =>
+                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    }
+                    style={{ flex: 3, height: "40px", padding: "4px 0" }}
+                    onChange={(value) =>
+                      handleVariantChange(index, "price", value)
+                    }
+                    placeholder="Giá sản phẩm"
+                  />
+                  <InputNumber
+                    defaultValue={variant.quantity}
+                    controls
+                    min={0}
+                    style={{ flex: 1, height: "40px", padding: "4px 0" }}
+                    onChange={(value) =>
+                      handleVariantChange(index, "quantity", value)
+                    }
+                    placeholder="Số lượng sản phẩm"
+                  />
+                </Flex>
+                <Divider />
+              </Form.Item>
+            );
+          })}
           <Form.Item
             name="desc"
             label="Mô tả"
