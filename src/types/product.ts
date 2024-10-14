@@ -15,6 +15,7 @@ export type CreateBaseProductRequest = {
   categoryIds: number[];
   brandId: number;
   images: File[];
+  mainImageId: number;
 };
 
 export type UpdateBaseProductRequest = {
@@ -130,19 +131,15 @@ export type BaseProductDetailVariant = {
   price: number;
 };
 
-export type BaseProductDetail = {
+export type BaseProductDetailAdmin = {
   id: number;
   slug: string;
   name: string;
   description: string;
-  categories: BaseProductDetailCategory[];
-  brand: BaseProductDetailBrand;
+  categoryIds: number[];
+  brandId: number;
   status: string;
-  averageRating: number;
-  numberOfPurchases: number;
-  numberOfReviews: number;
   images: BaseProductDetailImage[];
   optionValues: BaseProductDetailOptionValue[];
-  relatedProducts: BaseProductDetailRelatedProduct[];
   productVariants: BaseProductDetailVariant[];
 };

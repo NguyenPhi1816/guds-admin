@@ -42,3 +42,35 @@
   grid-template-columns: repeat(auto-fill, calc(40%));
   grid-gap: 1rem;
 }
+
+.preview {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.2s ease-in-out;
+}
+
+.preview.main {
+  border: 3px solid var(--light-yellow);
+}
+
+.preview:hover .preview-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.preview-img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.preview-btn {
+  padding: 5px 6px 4px 6px;
+  border-radius: 10rem;
+  border: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease-in-out;
+}

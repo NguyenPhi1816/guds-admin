@@ -2,7 +2,6 @@
 
 import {
   BaseProduct,
-  BaseProductDetail,
   CreateBaseProductRequest,
   CreateOptionValueRequest,
   CreateProductVariantRequest,
@@ -11,6 +10,7 @@ import {
   UpdateBaseProductRequest,
   UpdateProductVariantRequest,
   UpdateBaseProductStatusRequest,
+  BaseProductDetailAdmin,
 } from "@/types/product";
 import { api } from "./api";
 import { ErrorResponse } from "@/types/error";
@@ -34,10 +34,10 @@ export const getAllProduct = async (): Promise<BaseProduct[]> => {
 
 export const getBaseProductBySlug = async (
   slug: string
-): Promise<BaseProductDetail> => {
+): Promise<BaseProductDetailAdmin> => {
   try {
     const res = await fetch(`${api}/products/${slug}`);
-    const data: BaseProductDetail | ErrorResponse = await res.json();
+    const data: BaseProductDetailAdmin | ErrorResponse = await res.json();
 
     if ("error" in data) {
       throw new Error(data.message);

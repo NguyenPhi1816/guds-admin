@@ -4,6 +4,7 @@ import styles from "./ProductModal.module.scss";
 import classNames from "classnames/bind";
 
 import {
+  Badge,
   Button,
   Divider,
   Flex,
@@ -15,9 +16,8 @@ import {
   Select,
   Space,
   Tag,
-  Typography,
   Upload,
-  UploadFile,
+  UploadProps,
 } from "antd";
 import React, { useEffect, useState } from "react";
 import { getAllCategory } from "@/services/category";
@@ -29,9 +29,8 @@ import "react-quill/dist/quill.snow.css";
 import {
   DeleteOutlined,
   ExclamationCircleFilled,
-  MinusCircleOutlined,
+  InboxOutlined,
   PlusCircleOutlined,
-  UploadOutlined,
 } from "@ant-design/icons";
 import {
   CreateBaseProductRequest,
@@ -49,7 +48,7 @@ import { createOptionValues } from "@/services/product";
 import ImageUpload from "@/components/upload";
 
 const { confirm } = Modal;
-const { Title, Text } = Typography;
+const { Dragger } = Upload;
 
 interface ICreateProductModal {
   open: boolean;
@@ -83,12 +82,15 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
   const [desc, setDesc] = useState<string>("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [brandId, setBrandId] = useState<number | undefined>(undefined);
-  const [baseProductImages, setBaseProductImages] = useState<
-    UploadFile<File>[]
-  >([]);
+  const [baseProductImages, setBaseProductImages] = useState<File[]>([]);
+  const [baseProductImageUrls, setBaseProductImageUrls] = useState<string[]>(
+    []
+  );
+  const [mainImageId, setMainImageId] = useState<number>(0);
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
   const [valueArr, setValueArr] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Load categories and brands from database
   useEffect(() => {
@@ -119,6 +121,8 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
         setDesc("");
         setCategoryIds([]);
         setBaseProductImages([]);
+        setBaseProductImageUrls([]);
+        setMainImageId(0);
         setBrandId(undefined);
         setOption([]);
         setVariants([]);
@@ -136,11 +140,66 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
     setDesc("");
     setCategoryIds([]);
     setBaseProductImages([]);
+    setBaseProductImageUrls([]);
+    setMainImageId(0);
     setBrandId(undefined);
     setOption([]);
     setVariants([]);
     setValueArr([]);
     onCancel();
+  };
+
+  // Handle base product images
+  const props: UploadProps = {
+    name: "file",
+    multiple: true,
+    beforeUpload: (file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBaseProductImageUrls((prev) => [
+          ...prev,
+          e.target?.result as string,
+        ]);
+      };
+      reader.readAsDataURL(file);
+      setBaseProductImages((prev) => [...prev, file]);
+      return false; // Prevent automatic upload
+    },
+    onDrop(e) {
+      console.log("Dropped files", e.dataTransfer.files);
+      setBaseProductImages(Array.from(e.dataTransfer.files));
+    },
+    showUploadList: false,
+  };
+
+  const handleDeleteImages = (
+    e: React.MouseEvent<HTMLSpanElement, MouseEvent>,
+    index: number
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Cập nhật cả baseProductImages và baseProductImageUrls
+    setBaseProductImages((prevImages) => {
+      const newImages = prevImages.filter((item, idx) => idx !== index);
+      return newImages;
+    });
+    setBaseProductImageUrls((prevUrls) => {
+      const newUrls = prevUrls.filter((item, idx) => idx !== index);
+
+      // Đảm bảo rằng mainImageId không vượt quá giới hạn của mảng mới
+      setMainImageId((prevId) => {
+        if (newUrls.length === 0) {
+          return -1; // Nếu không còn hình ảnh nào, đặt về -1 hoặc giá trị mặc định
+        }
+        if (prevId >= newUrls.length) {
+          return newUrls.length - 1; // Đặt về phần tử cuối cùng
+        }
+        return prevId; // Giữ nguyên nếu index hợp lệ
+      });
+
+      return newUrls;
+    });
   };
 
   // Handle Option Values
@@ -250,78 +309,92 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
   // End of Handle Product Variant
 
   const handleCreateProduct = async () => {
-    await form.validateFields().then(async () => {
-      if (brandId) {
-        let isValid = true;
-        // Create Base Product
-        // Extract Files
-        const files: File[] = baseProductImages
-          .filter((file) => !!file.originFileObj)
-          .map((file) => file.originFileObj as File);
-        const createBaseProductRequest: CreateBaseProductRequest = {
-          name: name,
-          description: desc,
-          categoryIds: categoryIds,
-          brandId: brandId,
-          images: files,
-        };
-        const newBaseProduct = await createBaseProduct(
-          createBaseProductRequest
-        );
-        isValid = !!newBaseProduct;
-        if (!isValid) {
-          throw new Error("Có lỗi xảy ra trong quá trình thêm sản phẩm");
-        }
-        // End of Create Base Product
-
-        // Create Option Values
-        const createOptionValuesRequest: CreateOptionValueRequest = {
-          baseProductId: newBaseProduct.id,
-          optionValues: option,
-        };
-
-        const optionValuesResponse: OptionValuesResponse[] =
-          await createOptionValues(createOptionValuesRequest);
-        isValid = !!optionValuesResponse;
-        if (!isValid) {
-          throw new Error(
-            "Có lỗi xảy ra trong quá trình thêm tùy chọn cho sản phẩm"
-          );
-        }
-        const values: ValuesResponse[] = optionValuesResponse.reduce(
-          (prev, curr) => [...prev, ...curr.values],
-          [] as ValuesResponse[]
-        );
-        // End of Create Option Values
-        // Create Product Variant
-        const createProductVariantPromises = variants.map((variant, index) => {
-          const _optionValueIds: number[] = [];
-          for (let value of variant.optionValues) {
-            const _myValue = values.find((v) => v.valueName === value);
-            if (_myValue) {
-              _optionValueIds.push(_myValue.valueId);
-            }
-          }
-          const request: CreateProductVariantRequest = {
-            baseProductId: newBaseProduct.id,
-            image: variant.image as File,
-            optionValueIds: _optionValueIds,
-            price: variant.price ?? 0,
-            quantity: variant.quantity ?? 0,
+    try {
+      setLoading(true);
+      await form.validateFields().then(async () => {
+        if (brandId) {
+          let isValid = true;
+          // Create Base Product
+          // Extract Files
+          const files: File[] = baseProductImages;
+          const createBaseProductRequest: CreateBaseProductRequest = {
+            name: name,
+            description: desc,
+            categoryIds: categoryIds,
+            brandId: brandId,
+            images: files,
+            mainImageId: mainImageId,
           };
-          return createProductVariant(request);
-        });
-        const productVariants = await Promise.all(createProductVariantPromises);
-        isValid = !!productVariants;
-        if (!isValid) {
-          throw new Error(
-            "Có lỗi xảy ra trong quá trình thêm biến thể sản phẩm"
+          const newBaseProduct = await createBaseProduct(
+            createBaseProductRequest
           );
+          isValid = !!newBaseProduct;
+          if (!isValid) {
+            throw new Error("Có lỗi xảy ra trong quá trình thêm sản phẩm");
+          }
+          // End of Create Base Product
+
+          // Create Option Values
+          const createOptionValuesRequest: CreateOptionValueRequest = {
+            baseProductId: newBaseProduct.id,
+            optionValues: option,
+          };
+
+          const optionValuesResponse: OptionValuesResponse[] =
+            await createOptionValues(createOptionValuesRequest);
+          isValid = !!optionValuesResponse;
+          if (!isValid) {
+            throw new Error(
+              "Có lỗi xảy ra trong quá trình thêm tùy chọn cho sản phẩm"
+            );
+          }
+          const values: ValuesResponse[] = optionValuesResponse.reduce(
+            (prev, curr) => [...prev, ...curr.values],
+            [] as ValuesResponse[]
+          );
+          // End of Create Option Values
+          // Create Product Variant
+          const createProductVariantPromises = variants.map(
+            (variant, index) => {
+              const _optionValueIds: number[] = [];
+              for (let value of variant.optionValues) {
+                const _myValue = values.find((v) => v.valueName === value);
+                if (_myValue) {
+                  _optionValueIds.push(_myValue.valueId);
+                }
+              }
+              const request: CreateProductVariantRequest = {
+                baseProductId: newBaseProduct.id,
+                image: variant.image as File,
+                optionValueIds: _optionValueIds,
+                price: variant.price ?? 0,
+                quantity: variant.quantity ?? 0,
+              };
+              return createProductVariant(request);
+            }
+          );
+          const productVariants = await Promise.all(
+            createProductVariantPromises
+          );
+          isValid = !!productVariants;
+          if (!isValid) {
+            throw new Error(
+              "Có lỗi xảy ra trong quá trình thêm biến thể sản phẩm"
+            );
+          }
+          // End of Create Product Variant
+          handleCancelWithoutConfirm();
         }
-        // End of Create Product Variant
-        handleCancelWithoutConfirm();
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message);
+      } else {
+        message.error("Có lỗi xảy ra");
       }
-    });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -357,17 +430,65 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
               },
             ]}
           >
-            <Space>
-              <Upload
-                listType="picture"
-                beforeUpload={() => false}
-                defaultFileList={baseProductImages}
-                onChange={({ fileList }) => setBaseProductImages(fileList)}
-              >
-                <Button type="primary" icon={<UploadOutlined />}>
-                  Tải hình ảnh lên
-                </Button>
-              </Upload>
+            <Dragger {...props}>
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">
+                Click or drag file to this area to upload
+              </p>
+              <p className="ant-upload-hint">
+                Support for a single or bulk upload. Strictly prohibited from
+                uploading company data or other banned files.
+              </p>
+            </Dragger>
+            <Space
+              size={"middle"}
+              style={{
+                marginTop: "16px",
+                padding: "16px 0",
+                width: "100%",
+                overflowX: "scroll",
+              }}
+            >
+              {baseProductImageUrls.map((item, index) => {
+                if (mainImageId === index)
+                  return (
+                    <Badge.Ribbon
+                      text="Ảnh chính"
+                      color="#edcf5d"
+                      key={Math.random()}
+                    >
+                      <div
+                        className={cx("preview", "main")}
+                        onClick={(e) => setMainImageId(index)}
+                      >
+                        <img className={cx("preview-img")} src={item} />
+                        <button className={cx("preview-btn")}>
+                          <DeleteOutlined
+                            style={{ color: "#f5222d" }}
+                            onClick={(e) => handleDeleteImages(e, index)}
+                          />
+                        </button>
+                      </div>
+                    </Badge.Ribbon>
+                  );
+                return (
+                  <div
+                    className={cx("preview")}
+                    onClick={() => setMainImageId(index)}
+                    key={Math.random()}
+                  >
+                    <img className={cx("preview-img")} src={item} />
+                    <button className={cx("preview-btn")}>
+                      <DeleteOutlined
+                        style={{ color: "#f5222d" }}
+                        onClick={(e) => handleDeleteImages(e, index)}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
             </Space>
           </Form.Item>
           <Form.Item
@@ -589,7 +710,11 @@ const CreateProductModal: React.FC<ICreateProductModal> = ({
             <Button onClick={handleCancel} danger>
               Hủy
             </Button>
-            <Button onClick={handleCreateProduct} type="primary">
+            <Button
+              onClick={handleCreateProduct}
+              type="primary"
+              loading={loading}
+            >
               Tạo sản phẩm
             </Button>
           </Space>

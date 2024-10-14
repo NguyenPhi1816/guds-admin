@@ -19,6 +19,7 @@ export const createBaseProduct = async (
       formData.append("name", data.name);
       formData.append("description", data.description);
       formData.append("brandId", data.brandId.toString());
+      formData.append("mainImageId", data.mainImageId.toString());
       data.categoryIds.map((item) => {
         formData.append("categoryIds", item.toString());
       });

@@ -2,6 +2,7 @@ import styles from "./ProductModal.module.scss";
 import classNames from "classnames/bind";
 
 import {
+  Badge,
   Button,
   Divider,
   Flex,
@@ -15,38 +16,28 @@ import {
   Tag,
   Upload,
   UploadFile,
+  UploadProps,
 } from "antd";
 import React, { useEffect, useState } from "react";
-import { uploadImages } from "@/services/upload";
 import {
-  BaseProductDetail,
+  BaseProductDetailAdmin,
   CreateBaseProductRequest,
   CreateOptionValueRequest,
   CreateProductVariantRequest,
   OptionValuesRequest,
   OptionValuesResponse,
-  ProductVariantResponse,
-  UpdateBaseProductRequest,
-  UpdateProductVariantRequest,
   ValuesResponse,
 } from "@/types/product";
 import {
   createOptionValues,
   createProductVariant,
   getBaseProductBySlug,
-  updateBaseProduct,
-  updateProductVariant,
 } from "@/services/product";
-import BaseProductForm, { BaseProductFormType } from "./BaseProductForm";
-import OptionValueForm from "./OptionValueForm";
-import ProductVariantForm, {
-  ProductVariantFormType,
-} from "./ProductVariantForm";
 import {
   DeleteOutlined,
   ExclamationCircleFilled,
+  InboxOutlined,
   PlusCircleOutlined,
-  UploadOutlined,
 } from "@ant-design/icons";
 import { CategoryResponse } from "@/types/category";
 import { Brand } from "@/types/brand";
@@ -54,8 +45,11 @@ import ImageUpload from "@/components/upload";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { createBaseProduct } from "@/services/products-client";
+import { getAllCategory } from "@/services/category";
+import { getAllBrand } from "@/services/brand";
 
 const { confirm } = Modal;
+const { Dragger } = Upload;
 
 interface IUpdateProductModal {
   open: boolean;
@@ -91,26 +85,36 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   const [desc, setDesc] = useState<string>("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [brandId, setBrandId] = useState<number | undefined>(undefined);
-  const [baseProductImages, setBaseProductImages] = useState<
-    UploadFile<File>[]
-  >([]);
+  const [baseProductImages, setBaseProductImages] = useState<File[]>([]);
   const [baseProductImageUrls, setBaseProductImageUrls] = useState<string[]>(
     []
   );
+  const [mainImageId, setMainImageId] = useState<number>(0);
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
   const [valueArr, setValueArr] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
 
+  // Load categories and brands from database
+  useEffect(() => {
+    const fetcher = async () => {
+      const promises = [getAllCategory(), getAllBrand()];
+      const [_categories, _brands] = await Promise.all(promises);
+      setCategories(_categories as CategoryResponse[]);
+      setBrands(_brands as Brand[]);
+    };
+    fetcher();
+  }, []);
+
   useEffect(() => {
     const fetcher = async (slug: string) => {
       try {
-        const data: BaseProductDetail = await getBaseProductBySlug(slug);
-        console.log(data);
+        const data: BaseProductDetailAdmin = await getBaseProductBySlug(slug);
         setName(data.name);
         setDesc(data.description);
-        setCategoryIds(data.categories.map((item) => item.id));
-        setBrandId(data.brand.id);
+        setCategoryIds(data.categoryIds);
+        setBrandId(data.brandId);
         setBaseProductImageUrls(data.images.map((item) => item.path));
+        setMainImageId(data.images.findIndex((item) => item.isDefault));
         setOption(data.optionValues);
         setVariants(
           data.productVariants.map((variant) => ({
@@ -132,6 +136,16 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
       fetcher(slug);
     }
   }, [slug]);
+
+  useEffect(() => {
+    form.setFieldsValue({
+      name,
+      category: categoryIds,
+      brand: brandId,
+      desc,
+      images: baseProductImages,
+    });
+  }, [name, categoryIds, brandId, desc, baseProductImages, form]);
 
   const handleCancel = () => {
     confirm({
@@ -169,6 +183,57 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
     setVariants([]);
     setValueArr([]);
     onCancel();
+  }; // Handle base product images
+  const props: UploadProps = {
+    name: "file",
+    multiple: true,
+    beforeUpload: (file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBaseProductImageUrls((prev) => [
+          ...prev,
+          e.target?.result as string,
+        ]);
+      };
+      reader.readAsDataURL(file);
+      setBaseProductImages((prev) => [...prev, file]);
+      return false; // Prevent automatic upload
+    },
+    onDrop(e) {
+      console.log("Dropped files", e.dataTransfer.files);
+      setBaseProductImages(Array.from(e.dataTransfer.files));
+    },
+    showUploadList: false,
+  };
+
+  const handleDeleteImages = (
+    e: React.MouseEvent<HTMLSpanElement, MouseEvent>,
+    index: number
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Cập nhật cả baseProductImages và baseProductImageUrls
+    setBaseProductImages((prevImages) => {
+      const newImages = prevImages.filter((item, idx) => idx !== index);
+      return newImages;
+    });
+    setBaseProductImageUrls((prevUrls) => {
+      const newUrls = prevUrls.filter((item, idx) => idx !== index);
+
+      // Đảm bảo rằng mainImageId không vượt quá giới hạn của mảng mới
+      setMainImageId((prevId) => {
+        if (newUrls.length === 0) {
+          return -1; // Nếu không còn hình ảnh nào, đặt về -1 hoặc giá trị mặc định
+        }
+        if (prevId >= newUrls.length) {
+          return newUrls.length - 1; // Đặt về phần tử cuối cùng
+        }
+        return prevId; // Giữ nguyên nếu index hợp lệ
+      });
+
+      return newUrls;
+    });
   };
 
   // Handle Option Values
@@ -283,15 +348,14 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
         let isValid = true;
         // Create Base Product
         // Extract Files
-        const files: File[] = baseProductImages
-          .filter((file) => !!file.originFileObj)
-          .map((file) => file.originFileObj as File);
+        const files: File[] = baseProductImages;
         const createBaseProductRequest: CreateBaseProductRequest = {
           name: name,
           description: desc,
           categoryIds: categoryIds,
           brandId: brandId,
           images: files,
+          mainImageId: 0,
         };
         const newBaseProduct = await createBaseProduct(
           createBaseProductRequest
@@ -365,7 +429,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
       <Flex vertical>
         <Form
           form={form}
-          name="CreateCategory"
+          name="UpdateProduct"
           layout="vertical"
           requiredMark="optional"
           className={cx("form")}
@@ -385,22 +449,71 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
               },
             ]}
           >
-            <Space>
-              <Upload
-                listType="picture"
-                beforeUpload={() => false}
-                defaultFileList={baseProductImages}
-                onChange={({ fileList }) => setBaseProductImages(fileList)}
-              >
-                <Button type="primary" icon={<UploadOutlined />}>
-                  Tải hình ảnh lên
-                </Button>
-              </Upload>
+            <Dragger {...props}>
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">
+                Click or drag file to this area to upload
+              </p>
+              <p className="ant-upload-hint">
+                Support for a single or bulk upload. Strictly prohibited from
+                uploading company data or other banned files.
+              </p>
+            </Dragger>
+            <Space
+              size={"middle"}
+              style={{
+                marginTop: "16px",
+                padding: "16px 0",
+                width: "100%",
+                overflowX: "scroll",
+              }}
+            >
+              {baseProductImageUrls.map((item, index) => {
+                if (mainImageId === index)
+                  return (
+                    <Badge.Ribbon
+                      text="Ảnh chính"
+                      color="#edcf5d"
+                      key={Math.random()}
+                    >
+                      <div
+                        className={cx("preview", "main")}
+                        onClick={(e) => setMainImageId(index)}
+                      >
+                        <img className={cx("preview-img")} src={item} />
+                        <button className={cx("preview-btn")}>
+                          <DeleteOutlined
+                            style={{ color: "#f5222d" }}
+                            onClick={(e) => handleDeleteImages(e, index)}
+                          />
+                        </button>
+                      </div>
+                    </Badge.Ribbon>
+                  );
+                return (
+                  <div
+                    className={cx("preview")}
+                    onClick={() => setMainImageId(index)}
+                    key={Math.random()}
+                  >
+                    <img className={cx("preview-img")} src={item} />
+                    <button className={cx("preview-btn")}>
+                      <DeleteOutlined
+                        style={{ color: "#f5222d" }}
+                        onClick={(e) => handleDeleteImages(e, index)}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
             </Space>
           </Form.Item>
           <Form.Item
             name="name"
             label="Tên sản phẩm"
+            initialValue={name}
             rules={[{ required: true, message: "Vui lòng nhập tên sản phẩm" }]}
           >
             <Input
@@ -421,6 +534,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                 mode="multiple"
                 allowClear
                 placeholder="Vui lòng chọn danh mục"
+                value={categoryIds}
                 onChange={(value) => {
                   setCategoryIds(value);
                 }}
