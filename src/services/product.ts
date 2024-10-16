@@ -78,6 +78,24 @@ export const createBaseProduct = async (
   }
 };
 
+export const deleteBaseProductImage = async (publicId: string) => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      await fetch(`${api}/products/image?id=${publicId}`, {
+        headers: {
+          Authorization: "Bearer " + accessToken,
+        },
+        method: "DELETE",
+      });
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const updateBaseProduct = async (
   updateBaseProductRequest: UpdateBaseProductRequest
 ): Promise<BaseProduct> => {
@@ -211,6 +229,37 @@ export const updateProductVariant = async (
       const result: ProductVariantResponse | ErrorResponse = await res.json();
 
       if ("error" in result) {
+        throw new Error(result.message);
+      }
+
+      return result;
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateProductMainImage = async (
+  baseProductId: number,
+  imageId: number
+) => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const res = await fetch(
+        `${api}/products/image?baseProductId=${baseProductId}&imageId=${imageId}`,
+        {
+          headers: {
+            Authorization: "Bearer " + accessToken,
+          },
+          method: "PUT",
+        }
+      );
+      const result: number | ErrorResponse = await res.json();
+
+      if (typeof result != "number") {
         throw new Error(result.message);
       }
 

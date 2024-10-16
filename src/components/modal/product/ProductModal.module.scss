@@ -44,6 +44,7 @@
 }
 
 .preview {
+  position: relative;
   padding: 8px;
   border-radius: 8px;
   border: 1px solid #d9d9d9;
@@ -67,6 +68,9 @@
 }
 
 .preview-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
   padding: 5px 6px 4px 6px;
   border-radius: 10rem;
   border: none;

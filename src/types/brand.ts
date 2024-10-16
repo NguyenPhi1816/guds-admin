@@ -3,6 +3,7 @@ export type Brand = {
   slug: string;
   name: string;
   image: string;
+  imageId: string;
   numberOfProducts: number;
 };
 
@@ -15,5 +16,6 @@ export type UpdateBrandRequest = {
   id: number;
   name: string;
   existImage: string;
+  existImageId: string;
   newImage: File | null;
 };

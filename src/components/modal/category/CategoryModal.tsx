@@ -150,6 +150,7 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
                 id: value.id,
                 name: values.categoryName,
                 existImage: value.image,
+                existImageId: value.imageId,
                 newImage: image,
                 description: values.categoryDesc,
                 parentId: myParentId,

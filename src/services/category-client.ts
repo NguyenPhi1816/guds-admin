@@ -56,6 +56,7 @@ export const editCategory = async (
       formData.append("id", data.id as any);
       formData.append("name", data.name);
       formData.append("existImage", data.existImage);
+      formData.append("existImageId", data.existImageId);
       formData.append("description", data.description);
       if (!!data.parentId) {
         formData.append("parentId", data.parentId.toString());

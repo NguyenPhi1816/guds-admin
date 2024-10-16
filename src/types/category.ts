@@ -9,6 +9,7 @@ export type CategoryResponse = {
   slug: string;
   name: string;
   image: string;
+  imageId: string;
   description: string;
   parent: CategoryParentResponse;
   numberOfBaseProduct: number;
@@ -26,6 +27,7 @@ export type EditCategoryRequest = {
   id: number;
   name: string;
   existImage: string;
+  existImageId: string;
   newImage: File | null;
   description: string;
   parentId: number | null;

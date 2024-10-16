@@ -42,6 +42,7 @@ export const updateBrand = async (data: UpdateBrandRequest): Promise<Brand> => {
       formData.append("id", data.id.toString());
       formData.append("name", data.name);
       formData.append("existImage", data.existImage);
+      formData.append("existImageId", data.existImageId);
 
       if (!!data.newImage) {
         formData.append("newImage", data.newImage);

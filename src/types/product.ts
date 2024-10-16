@@ -98,6 +98,7 @@ export type BaseProductDetailBrand = {
 export type BaseProductDetailImage = {
   id: number;
   path: string;
+  publicId: string;
   isDefault: boolean;
 };
 
@@ -142,4 +143,9 @@ export type BaseProductDetailAdmin = {
   images: BaseProductDetailImage[];
   optionValues: BaseProductDetailOptionValue[];
   productVariants: BaseProductDetailVariant[];
+};
+
+export type AddBPImage = {
+  baseProductId: number;
+  images: File[];
 };

@@ -20,7 +20,9 @@ import {
 } from "antd";
 import React, { useEffect, useState } from "react";
 import {
+  AddBPImage,
   BaseProductDetailAdmin,
+  BaseProductDetailImage,
   CreateBaseProductRequest,
   CreateOptionValueRequest,
   CreateProductVariantRequest,
@@ -31,7 +33,9 @@ import {
 import {
   createOptionValues,
   createProductVariant,
+  deleteBaseProductImage,
   getBaseProductBySlug,
+  updateProductMainImage,
 } from "@/services/product";
 import {
   DeleteOutlined,
@@ -44,7 +48,7 @@ import { Brand } from "@/types/brand";
 import ImageUpload from "@/components/upload";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { createBaseProduct } from "@/services/products-client";
+import { addBPImage, createBaseProduct } from "@/services/products-client";
 import { getAllCategory } from "@/services/category";
 import { getAllBrand } from "@/services/brand";
 
@@ -81,14 +85,15 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   const [brands, setBrands] = useState<Brand[]>([]);
 
   const [form] = Form.useForm();
+  const [baseProductId, setBaseProductId] = useState<number>();
   const [name, setName] = useState<string>("");
   const [desc, setDesc] = useState<string>("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [brandId, setBrandId] = useState<number | undefined>(undefined);
   const [baseProductImages, setBaseProductImages] = useState<File[]>([]);
-  const [baseProductImageUrls, setBaseProductImageUrls] = useState<string[]>(
-    []
-  );
+  const [baseProductImageUrls, setBaseProductImageUrls] = useState<
+    BaseProductDetailImage[]
+  >([]);
   const [mainImageId, setMainImageId] = useState<number>(0);
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
   const [valueArr, setValueArr] = useState<string[]>([]);
@@ -109,12 +114,18 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
     const fetcher = async (slug: string) => {
       try {
         const data: BaseProductDetailAdmin = await getBaseProductBySlug(slug);
+        setBaseProductId(data.id);
         setName(data.name);
         setDesc(data.description);
         setCategoryIds(data.categoryIds);
         setBrandId(data.brandId);
-        setBaseProductImageUrls(data.images.map((item) => item.path));
-        setMainImageId(data.images.findIndex((item) => item.isDefault));
+        setBaseProductImageUrls(data.images);
+
+        const mainImageId = data.images.find((item) => item.isDefault)?.id;
+        if (mainImageId) {
+          setMainImageId(mainImageId);
+        }
+
         setOption(data.optionValues);
         setVariants(
           data.productVariants.map((variant) => ({
@@ -143,9 +154,9 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
       category: categoryIds,
       brand: brandId,
       desc,
-      images: baseProductImages,
+      images: baseProductImageUrls.map((item) => item.path),
     });
-  }, [name, categoryIds, brandId, desc, baseProductImages, form]);
+  }, [name, categoryIds, brandId, desc, baseProductImageUrls, form]);
 
   const handleCancel = () => {
     confirm({
@@ -183,27 +194,51 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
     setVariants([]);
     setValueArr([]);
     onCancel();
-  }; // Handle base product images
+  };
+
+  // Handle base product images
+
+  let uploadTimeout: any; // Đặt một biến toàn cục để theo dõi trạng thái timeout
+
   const props: UploadProps = {
     name: "file",
     multiple: true,
     beforeUpload: (file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setBaseProductImageUrls((prev) => [
-          ...prev,
-          e.target?.result as string,
-        ]);
-      };
-      reader.readAsDataURL(file);
-      setBaseProductImages((prev) => [...prev, file]);
-      return false; // Prevent automatic upload
+      return false; // Ngăn việc upload tự động
     },
-    onDrop(e) {
-      console.log("Dropped files", e.dataTransfer.files);
-      setBaseProductImages(Array.from(e.dataTransfer.files));
+    onChange: async (e) => {
+      // Nếu đã có timeout trước đó, clear nó để tránh việc upload quá sớm
+      if (uploadTimeout) {
+        clearTimeout(uploadTimeout);
+      }
+
+      // Đặt một timeout để đợi tất cả các tệp được thêm vào
+      uploadTimeout = setTimeout(async () => {
+        const files = e.fileList
+          .map((fileItem) => fileItem.originFileObj as File)
+          .filter((file): file is File => !!file);
+
+        if (files.length > 0) {
+          await handleUploadImage(files); // Upload tất cả tệp cùng một lúc
+          e.fileList.length = 0; // Reset fileList
+        }
+
+        // Clear timeout sau khi xử lý xong
+        uploadTimeout = null;
+      }, 300); // Đợi 300ms để tất cả các tệp được thêm vào danh sách
     },
     showUploadList: false,
+  };
+
+  const handleUploadImage = async (files: File[]) => {
+    if (baseProductId) {
+      const request: AddBPImage = {
+        baseProductId: baseProductId,
+        images: files,
+      };
+      const newImages: BaseProductDetailImage[] = await addBPImage(request);
+      setBaseProductImageUrls((prev) => [...prev, ...newImages]);
+    }
   };
 
   const handleDeleteImages = (
@@ -212,28 +247,71 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   ) => {
     e.preventDefault();
     e.stopPropagation();
+    confirm({
+      title: "Xóa hình ảnh?",
+      icon: <ExclamationCircleFilled />,
+      content: "Bạn chắc chắn muốn xóa hình ảnh này?",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Không",
+      onOk: async () => {
+        e.preventDefault();
+        e.stopPropagation();
 
-    // Cập nhật cả baseProductImages và baseProductImageUrls
-    setBaseProductImages((prevImages) => {
-      const newImages = prevImages.filter((item, idx) => idx !== index);
-      return newImages;
-    });
-    setBaseProductImageUrls((prevUrls) => {
-      const newUrls = prevUrls.filter((item, idx) => idx !== index);
+        if (baseProductImageUrls[index].publicId === "") {
+          // Cập nhật cả baseProductImages và baseProductImageUrls
+          setBaseProductImages((prevImages) => {
+            const newImages = prevImages.filter((item, idx) => idx !== index);
+            return newImages;
+          });
+          setBaseProductImageUrls((prevUrls) => {
+            const newUrls = prevUrls.filter((item, idx) => idx !== index);
 
-      // Đảm bảo rằng mainImageId không vượt quá giới hạn của mảng mới
-      setMainImageId((prevId) => {
-        if (newUrls.length === 0) {
-          return -1; // Nếu không còn hình ảnh nào, đặt về -1 hoặc giá trị mặc định
+            // Đảm bảo rằng mainImageId không vượt quá giới hạn của mảng mới
+            setMainImageId((prevId) => {
+              if (newUrls.length === 0) {
+                return -1; // Nếu không còn hình ảnh nào, đặt về -1 hoặc giá trị mặc định
+              }
+              if (prevId >= newUrls.length) {
+                return newUrls.length - 1; // Đặt về phần tử cuối cùng
+              }
+              return prevId; // Giữ nguyên nếu index hợp lệ
+            });
+
+            return newUrls;
+          });
+        } else {
+          const publicId = baseProductImageUrls[index].publicId;
+          await deleteBaseProductImage(publicId);
+          setBaseProductImageUrls((prevUrls) => {
+            const newUrls = prevUrls.filter((item, idx) => idx !== index);
+
+            // Đảm bảo rằng mainImageId không vượt quá giới hạn của mảng mới
+            setMainImageId((prevId) => {
+              if (newUrls.length === 0) {
+                return -1; // Nếu không còn hình ảnh nào, đặt về -1 hoặc giá trị mặc định
+              }
+              if (prevId >= newUrls.length) {
+                return newUrls.length - 1; // Đặt về phần tử cuối cùng
+              }
+              return prevId; // Giữ nguyên nếu index hợp lệ
+            });
+
+            return newUrls;
+          });
         }
-        if (prevId >= newUrls.length) {
-          return newUrls.length - 1; // Đặt về phần tử cuối cùng
-        }
-        return prevId; // Giữ nguyên nếu index hợp lệ
-      });
-
-      return newUrls;
+      },
+      onCancel() {
+        console.log("Cancel");
+      },
     });
+  };
+
+  const handleChangeMainImage = async (imageId: number) => {
+    if (baseProductId) {
+      setMainImageId(imageId);
+      await updateProductMainImage(baseProductId, imageId);
+    }
   };
 
   // Handle Option Values
@@ -342,7 +420,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   };
   // End of Handle Product Variant
 
-  const handleCreateProduct = async () => {
+  const handleUpdateProduct = async () => {
     await form.validateFields().then(async () => {
       if (brandId) {
         let isValid = true;
@@ -441,7 +519,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
               {
                 required: true,
                 validator: (_, value) =>
-                  baseProductImages.length >= 2
+                  baseProductImages.length + baseProductImageUrls.length >= 2
                     ? Promise.resolve()
                     : Promise.reject(
                         new Error("Vui lòng tải lên đủ 3 hình ảnh")
@@ -471,18 +549,18 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
               }}
             >
               {baseProductImageUrls.map((item, index) => {
-                if (mainImageId === index)
+                if (mainImageId === item.id)
                   return (
                     <Badge.Ribbon
                       text="Ảnh chính"
                       color="#edcf5d"
-                      key={Math.random()}
+                      key={item.id}
                     >
                       <div
                         className={cx("preview", "main")}
-                        onClick={(e) => setMainImageId(index)}
+                        onClick={() => handleChangeMainImage(item.id)}
                       >
-                        <img className={cx("preview-img")} src={item} />
+                        <img className={cx("preview-img")} src={item.path} />
                         <button className={cx("preview-btn")}>
                           <DeleteOutlined
                             style={{ color: "#f5222d" }}
@@ -495,10 +573,10 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                 return (
                   <div
                     className={cx("preview")}
-                    onClick={() => setMainImageId(index)}
-                    key={Math.random()}
+                    onClick={() => handleChangeMainImage(item.id)}
+                    key={item.id}
                   >
-                    <img className={cx("preview-img")} src={item} />
+                    <img className={cx("preview-img")} src={item.path} />
                     <button className={cx("preview-btn")}>
                       <DeleteOutlined
                         style={{ color: "#f5222d" }}
@@ -731,8 +809,8 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
             <Button onClick={handleCancel} danger>
               Hủy
             </Button>
-            <Button onClick={handleCreateProduct} type="primary">
-              Tạo sản phẩm
+            <Button onClick={handleUpdateProduct} type="primary">
+              Lưu sản phẩm
             </Button>
           </Space>
         </Flex>

@@ -110,6 +110,7 @@ const BrandModal: React.FC<IBrandModal> = ({
                 id: value.id,
                 name: values.brandName,
                 existImage: value.image,
+                existImageId: value.imageId,
                 newImage: image,
               };
               const data = await updateBrand(request);
