@@ -26,9 +26,14 @@ const beforeUpload = (file: FileType) => {
 interface IImageUpload {
   defaultValue?: string | null;
   onChange: (file: File, imageUrl?: string) => void;
+  disabled?: boolean;
 }
 
-const ImageUpload: React.FC<IImageUpload> = ({ defaultValue, onChange }) => {
+const ImageUpload: React.FC<IImageUpload> = ({
+  defaultValue,
+  onChange,
+  disabled = false,
+}) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
 
@@ -67,6 +72,7 @@ const ImageUpload: React.FC<IImageUpload> = ({ defaultValue, onChange }) => {
       beforeUpload={beforeUpload}
       onChange={handleChange}
       action={uploadAction}
+      disabled={disabled}
     >
       {imageUrl ? (
         <img src={imageUrl} alt="avatar" style={{ width: "100%" }} />

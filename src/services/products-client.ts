@@ -6,6 +6,8 @@ import {
   CreateOptionValueRequest,
   CreateProductVariantRequest,
   ProductVariantResponse,
+  UpdateBaseProductRequest,
+  UpdateProductVariantRequest,
 } from "@/types/product";
 import { getAccessToken } from "./auth";
 import { ErrorResponse } from "@/types/error";
@@ -112,6 +114,48 @@ export const createProductVariant = async (
             Authorization: "Bearer " + accessToken,
           },
           method: "POST",
+          body: formData,
+        }
+      );
+      const result: ProductVariantResponse | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
+      return result;
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateProductVariant = async (
+  data: UpdateProductVariantRequest
+): Promise<ProductVariantResponse> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const formData = new FormData();
+
+      formData.append("productVariantId", data.productVariantId.toString());
+      if (data.image) {
+        formData.append("image", data.image);
+      }
+      formData.append("imageUrl", data.imageUrl);
+      formData.append("imageId", data.imageId);
+      formData.append("quantity", data.quantity.toString());
+      formData.append("price", data.price.toString());
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_GUDS_API}/product-variants`,
+        {
+          headers: {
+            Authorization: "Bearer " + accessToken,
+          },
+          method: "PUT",
           body: formData,
         }
       );

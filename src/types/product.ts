@@ -64,7 +64,9 @@ export type CreateProductVariantRequest = {
 
 export type UpdateProductVariantRequest = {
   productVariantId: number;
-  image: string;
+  image: File | null;
+  imageUrl: string;
+  imageId: string;
   quantity: number;
   price: number;
 };
@@ -77,6 +79,7 @@ export type OptionValueResponse = {
 export type ProductVariantResponse = {
   id: number;
   image: string;
+  imageId: string;
   quantity: number;
   optionValue: OptionValueResponse[];
   price: number;
@@ -127,6 +130,7 @@ export type ProductVariantOptionValue = {
 export type BaseProductDetailVariant = {
   id: number;
   image: string;
+  imageId: string;
   quantity: number;
   optionValue: ProductVariantOptionValue[];
   price: number;

@@ -15,7 +15,6 @@ import {
   Space,
   Tag,
   Upload,
-  UploadFile,
   UploadProps,
 } from "antd";
 import React, { useEffect, useState } from "react";
@@ -28,6 +27,7 @@ import {
   CreateProductVariantRequest,
   OptionValuesRequest,
   OptionValuesResponse,
+  UpdateProductVariantRequest,
   ValuesResponse,
 } from "@/types/product";
 import {
@@ -38,17 +38,23 @@ import {
   updateProductMainImage,
 } from "@/services/product";
 import {
+  CloseCircleOutlined,
   DeleteOutlined,
+  EditOutlined,
   ExclamationCircleFilled,
   InboxOutlined,
-  PlusCircleOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import { CategoryResponse } from "@/types/category";
 import { Brand } from "@/types/brand";
 import ImageUpload from "@/components/upload";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { addBPImage, createBaseProduct } from "@/services/products-client";
+import {
+  addBPImage,
+  createBaseProduct,
+  updateProductVariant,
+} from "@/services/products-client";
 import { getAllCategory } from "@/services/category";
 import { getAllBrand } from "@/services/brand";
 
@@ -61,15 +67,13 @@ interface IUpdateProductModal {
   onCancel: () => void;
 }
 
-const DEFAULT_OPTION_NAME = "";
-const DEFAULT_VALUE_NAME = "";
-
 export type Variant = {
-  id: number | null;
+  id: number;
   image: File | null;
   imageUrl: string;
-  quantity: number | undefined;
-  price: number | undefined;
+  imageId: string;
+  quantity: number;
+  price: number;
   optionValues: string[];
 };
 
@@ -80,11 +84,12 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   slug,
   onCancel,
 }) => {
-  const disable = false;
+  const disable = true;
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
 
   const [form] = Form.useForm();
+  const [data, setData] = useState<BaseProductDetailAdmin>();
   const [baseProductId, setBaseProductId] = useState<number>();
   const [name, setName] = useState<string>("");
   const [desc, setDesc] = useState<string>("");
@@ -98,6 +103,8 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   const [option, setOption] = useState<OptionValuesRequest[]>([]);
   const [valueArr, setValueArr] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
+  const [editVariantIndex, setEditVariantIndex] = useState<number>();
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Load categories and brands from database
   useEffect(() => {
@@ -114,6 +121,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
     const fetcher = async (slug: string) => {
       try {
         const data: BaseProductDetailAdmin = await getBaseProductBySlug(slug);
+        setData(data);
         setBaseProductId(data.id);
         setName(data.name);
         setDesc(data.description);
@@ -133,6 +141,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
             imageUrl: variant.image,
             optionValues: variant.optionValue.map((opval) => opval.value),
             image: null,
+            imageId: variant.imageId,
             price: variant.price,
             quantity: variant.quantity,
           }))
@@ -313,98 +322,6 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
       await updateProductMainImage(baseProductId, imageId);
     }
   };
-
-  // Handle Option Values
-  const handleCreateOption = () => {
-    const defaultOptionExists = option.some(
-      (item) => item.option === DEFAULT_OPTION_NAME
-    );
-    if (defaultOptionExists) {
-      message.error("Vui lòng nhập tùy chọn trước khi thêm tùy chọn mới");
-      return;
-    }
-    setOption((prev) => {
-      const newItem: OptionValuesRequest = {
-        option: DEFAULT_OPTION_NAME,
-        values: [],
-      };
-      return [...prev, newItem];
-    });
-    setValueArr((prev) => [...prev, ""]);
-  };
-
-  const handleRemoveOption = (optionName: string) => {
-    setOption((prev) => {
-      return prev.filter((item) => item.option !== optionName);
-    });
-  };
-
-  const handleCreateValue = (optionIndex: number, newValue: string) => {
-    setOption((prev) => {
-      const newOptions = [...prev];
-      const values = newOptions[optionIndex].values;
-      if (values.includes(newValue)) {
-        return prev;
-      } else {
-        newOptions[optionIndex].values = [...values, newValue];
-        return newOptions;
-      }
-    });
-    setValueArr((prev) => {
-      const newValueArr = [...prev];
-      newValueArr[optionIndex] = "";
-      return newValueArr;
-    });
-  };
-
-  const handleRemoveValue = (optionName: string, optionValue: string) => {
-    setOption((prev) => {
-      return prev.map((item) =>
-        item.option === optionName
-          ? {
-              ...item,
-              values: item.values.filter((value) => value !== optionValue),
-            }
-          : item
-      );
-    });
-  };
-
-  const handleOptionNameChange = (index: number, value: string) => {
-    setOption((prev) => {
-      const newOptions = [...prev];
-      newOptions[index] = { ...newOptions[index], option: value };
-      return newOptions;
-    });
-  };
-
-  const generateCombinations = (options: OptionValuesRequest[]): string[][] => {
-    const results: string[][] = [];
-    const generate = (current: string[], depth: number) => {
-      if (depth === options.length) {
-        results.push(current);
-        return;
-      }
-      for (const value of options[depth].values) {
-        generate([...current, value], depth + 1);
-      }
-    };
-    generate([], 0);
-    return results;
-  };
-
-  const generateVariants = () => {
-    const allCombinations = generateCombinations(option);
-    const initialVariants: Variant[] = allCombinations.map((combination) => ({
-      id: null,
-      image: null,
-      imageUrl: "",
-      price: undefined,
-      quantity: undefined,
-      optionValues: combination,
-    }));
-    setVariants(initialVariants);
-  };
   // End of Handle Option Values
 
   // Start of Handle Product Variant
@@ -492,6 +409,65 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
         handleCancelWithoutConfirm();
       }
     });
+  };
+
+  const handleResetVariant = () => {
+    if (data) {
+      setVariants(
+        data.productVariants.map((variant) => ({
+          id: variant.id,
+          imageUrl: variant.image,
+          optionValues: variant.optionValue.map((opval) => opval.value),
+          image: null,
+          imageId: variant.imageId,
+          price: variant.price,
+          quantity: variant.quantity,
+        }))
+      );
+      setEditVariantIndex(undefined);
+    }
+  };
+
+  const handleEditVariant = async (id: number) => {
+    try {
+      setLoading(true);
+      const variant = variants.find((item) => item.id === id);
+
+      if (variant) {
+        const data: UpdateProductVariantRequest = {
+          productVariantId: variant.id,
+          image: variant.image,
+          imageUrl: variant.imageUrl,
+          imageId: variant.imageId,
+          price: variant.price,
+          quantity: variant.quantity,
+        };
+
+        const newVariant = await updateProductVariant(data);
+
+        setVariants((prev) => {
+          const newValue = prev.filter((item) => item.id !== id);
+          newValue.push({
+            id: newVariant.id,
+            image: null,
+            imageId: newVariant.imageId,
+            imageUrl: newVariant.image,
+            optionValues: variant.optionValues,
+            price: newVariant.price,
+            quantity: newVariant.quantity,
+          });
+          return newValue;
+        });
+
+        setEditVariantIndex(undefined);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -671,18 +647,11 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                           placeholder="Vui lòng nhập tùy chọn"
                           size="large"
                           defaultValue={item.option}
-                          onBlur={(e) =>
-                            handleOptionNameChange(optionIndex, e.target.value)
-                          }
                         />
                         <Flex className={cx("tags-input")} align="center">
                           {item.values.map((value, valueIndex) => (
                             <Tag
                               key={valueIndex}
-                              closeIcon
-                              onClose={() =>
-                                handleRemoveValue(item.option, value)
-                              }
                               style={{ height: "fit-content" }}
                             >
                               {value}
@@ -703,34 +672,13 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                                 return newValueArr;
                               })
                             }
-                            onPressEnter={(e) => {
-                              handleCreateValue(
-                                optionIndex,
-                                e.currentTarget.value
-                              );
-                            }}
                           />
                         </Flex>
-                        <Button
-                          disabled={disable}
-                          shape="circle"
-                          onClick={() => handleRemoveOption(item.option)}
-                        >
-                          <DeleteOutlined />
-                        </Button>
                       </Flex>
                       <Divider />
                     </div>
                   ))}
               </Space>
-              <Button
-                disabled={disable}
-                onClick={handleCreateOption}
-                style={{ width: "fit-content" }}
-              >
-                <PlusCircleOutlined />
-                Thêm tùy chọn
-              </Button>
             </Flex>
           </Form.Item>
           {variants.map((variant, index) => {
@@ -757,6 +705,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
               >
                 <Flex gap={16} align="center">
                   <ImageUpload
+                    disabled={editVariantIndex !== index}
                     defaultValue={variant.imageUrl}
                     onChange={(file, url) => {
                       handleVariantChange(index, "image", file);
@@ -764,6 +713,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                     }}
                   />
                   <InputNumber
+                    disabled={editVariantIndex !== index}
                     defaultValue={variant.price}
                     controls={false}
                     min={1000}
@@ -777,6 +727,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                     placeholder="Giá sản phẩm"
                   />
                   <InputNumber
+                    disabled={editVariantIndex !== index}
                     defaultValue={variant.quantity}
                     controls
                     min={0}
@@ -786,6 +737,37 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                     }
                     placeholder="Số lượng sản phẩm"
                   />
+                  {editVariantIndex === index ? (
+                    <>
+                      <Button
+                        loading={loading}
+                        type="primary"
+                        style={{ width: "fit-content" }}
+                        onClick={() => handleEditVariant(variant.id)}
+                      >
+                        <SaveOutlined />
+                        Lưu
+                      </Button>
+                      <Button
+                        type="primary"
+                        danger
+                        style={{ width: "fit-content" }}
+                        onClick={handleResetVariant}
+                      >
+                        <CloseCircleOutlined />
+                        Hủy
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      disabled={editVariantIndex !== undefined}
+                      style={{ width: "fit-content" }}
+                      onClick={() => setEditVariantIndex(index)}
+                    >
+                      <EditOutlined />
+                      Chỉnh sửa
+                    </Button>
+                  )}
                 </Flex>
                 <Divider />
               </Form.Item>
