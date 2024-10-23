@@ -87,6 +87,7 @@ const ProductPage = () => {
 
   const handleCancelUpdate = () => {
     setUpdateModalOpen(false);
+    setRefresh(true);
     setCurrentBaseProductSlug(null);
   };
 
@@ -221,7 +222,10 @@ const ProductPage = () => {
       </Table>
       <CreateProductModal
         open={createModalOpen}
-        onCancel={() => setCreateModalOpen(false)}
+        onCancel={() => {
+          setCreateModalOpen(false);
+          setRefresh(true);
+        }}
       />
       {currentBaseProductSlug && (
         <UpdateProductModal

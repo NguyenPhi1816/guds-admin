@@ -27,6 +27,7 @@ import {
   CreateProductVariantRequest,
   OptionValuesRequest,
   OptionValuesResponse,
+  UpdateBaseProductRequest,
   UpdateProductVariantRequest,
   ValuesResponse,
 } from "@/types/product";
@@ -35,6 +36,7 @@ import {
   createProductVariant,
   deleteBaseProductImage,
   getBaseProductBySlug,
+  updateBaseProduct,
   updateProductMainImage,
 } from "@/services/product";
 import {
@@ -105,6 +107,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   const [variants, setVariants] = useState<Variant[]>([]);
   const [editVariantIndex, setEditVariantIndex] = useState<number>();
   const [loading, setLoading] = useState<boolean>(false);
+  const [BPLoading, setBPLoading] = useState<boolean>(false);
 
   // Load categories and brands from database
   useEffect(() => {
@@ -339,74 +342,28 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
 
   const handleUpdateProduct = async () => {
     await form.validateFields().then(async () => {
-      if (brandId) {
-        let isValid = true;
-        // Create Base Product
-        // Extract Files
-        const files: File[] = baseProductImages;
-        const createBaseProductRequest: CreateBaseProductRequest = {
-          name: name,
-          description: desc,
-          categoryIds: categoryIds,
+      if (data && brandId) {
+        const request: UpdateBaseProductRequest = {
+          id: data.id,
           brandId: brandId,
-          images: files,
-          mainImageId: 0,
-        };
-        const newBaseProduct = await createBaseProduct(
-          createBaseProductRequest
-        );
-        isValid = !!newBaseProduct;
-        if (!isValid) {
-          throw new Error("Có lỗi xảy ra trong quá trình thêm sản phẩm");
-        }
-        // End of Create Base Product
-
-        // Create Option Values
-        const createOptionValuesRequest: CreateOptionValueRequest = {
-          baseProductId: newBaseProduct.id,
-          optionValues: option,
+          categoryIds: categoryIds,
+          description: desc,
+          name: name,
         };
 
-        const optionValuesResponse: OptionValuesResponse[] =
-          await createOptionValues(createOptionValuesRequest);
-        isValid = !!optionValuesResponse;
-        if (!isValid) {
-          throw new Error(
-            "Có lỗi xảy ra trong quá trình thêm tùy chọn cho sản phẩm"
-          );
-        }
-        const values: ValuesResponse[] = optionValuesResponse.reduce(
-          (prev, curr) => [...prev, ...curr.values],
-          [] as ValuesResponse[]
-        );
-        // End of Create Option Values
-        // Create Product Variant
-        const createProductVariantPromises = variants.map((variant, index) => {
-          const _optionValueIds: number[] = [];
-          for (let value of variant.optionValues) {
-            const _myValue = values.find((v) => v.valueName === value);
-            if (_myValue) {
-              _optionValueIds.push(_myValue.valueId);
-            }
+        try {
+          setBPLoading(true);
+          await updateBaseProduct(request);
+          handleCancelWithoutConfirm();
+        } catch (error) {
+          if (error instanceof Error) {
+            message.error(error.message);
+          } else {
+            message.error("Có lỗi xảy ra");
           }
-          const request: CreateProductVariantRequest = {
-            baseProductId: newBaseProduct.id,
-            image: variant.image as File,
-            optionValueIds: _optionValueIds,
-            price: variant.price ?? 0,
-            quantity: variant.quantity ?? 0,
-          };
-          return createProductVariant(request);
-        });
-        const productVariants = await Promise.all(createProductVariantPromises);
-        isValid = !!productVariants;
-        if (!isValid) {
-          throw new Error(
-            "Có lỗi xảy ra trong quá trình thêm biến thể sản phẩm"
-          );
+        } finally {
+          setBPLoading(false);
         }
-        // End of Create Product Variant
-        handleCancelWithoutConfirm();
       }
     });
   };

@@ -24,7 +24,6 @@ export type UpdateBaseProductRequest = {
   description: string;
   categoryIds: number[];
   brandId: number;
-  images: string[];
 };
 
 export type UpdateBaseProductStatusRequest = {
