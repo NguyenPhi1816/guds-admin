@@ -78,3 +78,16 @@
   visibility: hidden;
   transition: all 0.2s ease-in-out;
 }
+
+.statistic-item {
+  flex: 1;
+
+  &-number {
+    font-size: 48px;
+    font-weight: 600;
+  }
+}
+
+.total-revenue {
+  flex: 2;
+}

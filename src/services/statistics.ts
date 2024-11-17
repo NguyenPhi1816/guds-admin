@@ -1,22 +1,31 @@
 "use server";
-import { Order, OrderDetail } from "@/types/order";
 import { getAccessToken } from "./auth";
 import { api } from "./api";
 import { ErrorResponse } from "@/types/error";
-import { OrderStatus } from "@/constant/enum/orderStatus";
+import {
+  GetProductStatisticsRequest,
+  GetProductStatisticsResponse,
+  GetPurchasesStatisticsRequest,
+  PriceChangeStatisticsRequest,
+  PriceChangeStatisticsResponse,
+} from "@/types/statistics";
 
-export const getAllOrder = async (): Promise<Order[]> => {
+export const getProductStatistics = async (
+  data: GetProductStatisticsRequest
+): Promise<GetProductStatisticsResponse[]> => {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const res = await fetch(`${api}/orders`, {
+      const res = await fetch(`${api}/products/statistics`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
         },
-        method: "GET",
+        method: "Post",
+        body: JSON.stringify(data),
       });
-      const result: Order[] | ErrorResponse = await res.json();
+      const result: GetProductStatisticsResponse[] | ErrorResponse =
+        await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);
@@ -31,18 +40,22 @@ export const getAllOrder = async (): Promise<Order[]> => {
   }
 };
 
-export const getOrderDetail = async (orderId: number): Promise<OrderDetail> => {
+export const getPurchasesStatistics = async (
+  data: GetPurchasesStatisticsRequest
+): Promise<GetProductStatisticsResponse[]> => {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const res = await fetch(`${api}/orders/detail/${orderId}`, {
+      const res = await fetch(`${api}/products/purchases/statistics`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
         },
-        method: "GET",
+        method: "Post",
+        body: JSON.stringify(data),
       });
-      const result: OrderDetail | ErrorResponse = await res.json();
+      const result: GetProductStatisticsResponse[] | ErrorResponse =
+        await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);
@@ -57,21 +70,22 @@ export const getOrderDetail = async (orderId: number): Promise<OrderDetail> => {
   }
 };
 
-export const updateOrderStatus = async (
-  orderId: number,
-  status: OrderStatus
-): Promise<OrderDetail> => {
+export const priceChangeStatistics = async (
+  data: PriceChangeStatisticsRequest
+): Promise<PriceChangeStatisticsResponse[]> => {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const res = await fetch(`${api}/orders/${orderId}/${status}`, {
+      const res = await fetch(`${api}/products/prices/statistics`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
         },
-        method: "PUT",
+        method: "Post",
+        body: JSON.stringify(data),
       });
-      const result: OrderDetail | ErrorResponse = await res.json();
+      const result: PriceChangeStatisticsResponse[] | ErrorResponse =
+        await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);
@@ -86,18 +100,17 @@ export const updateOrderStatus = async (
   }
 };
 
-export const getOrderStatistic = async () => {
+export const getTop10MostPurchasedProducts = async (): Promise<any[]> => {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const res = await fetch(`${api}/orders/statistic`, {
+      const res = await fetch(`${api}/products/top-10/most-purchased`, {
         headers: {
           Authorization: "Bearer " + accessToken,
         },
         method: "GET",
       });
-
-      const result: any | ErrorResponse = await res.json();
+      const result: any[] | ErrorResponse = await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);
@@ -112,18 +125,17 @@ export const getOrderStatistic = async () => {
   }
 };
 
-export const getOrderStatisticByProductSlug = async (slug: string) => {
+export const getTop10MostPurchasedCategories = async (): Promise<any[]> => {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const res = await fetch(`${api}/orders/statistic/${slug}`, {
+      const res = await fetch(`${api}/categories/top-10/most-purchased`, {
         headers: {
           Authorization: "Bearer " + accessToken,
         },
         method: "GET",
       });
-
-      const result: any | ErrorResponse = await res.json();
+      const result: any[] | ErrorResponse = await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);

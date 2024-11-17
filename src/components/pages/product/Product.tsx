@@ -28,6 +28,8 @@ import { getAllProduct, updateBaseProductStatus } from "@/services/product";
 import { productStatus } from "@/constant/enum/productStatus";
 import CreateProductModal from "@/components/modal/product/CreateProductModal";
 import UpdateProductModal from "@/components/modal/product/UpdateProductModal";
+import ProductChart from "@/components/modal/product/ProductChart";
+import PurchaseChart from "@/components/modal/product/PurchasesChart";
 
 const cx = classNames.bind(styles);
 
@@ -40,9 +42,13 @@ const ProductPage = () => {
   const [currentBaseProductSlug, setCurrentBaseProductSlug] = useState<
     string | null
   >(null);
+  const [currentBaseProductId, setCurrentBaseProductId] = useState<
+    number | null
+  >(null);
   const [messageApi, contextHolder] = message.useMessage();
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
   const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
+  const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const fetcher = async () => {
@@ -209,14 +215,26 @@ const ProductPage = () => {
           title="Hành động"
           key="action"
           render={(_baseProduct: BaseProduct) => (
-            <Button
-              type="primary"
-              className={cx("btn")}
-              onClick={() => showEditModal(_baseProduct.slug)}
-            >
-              <EditOutlined />
-              Chỉnh sửa
-            </Button>
+            <Flex gap={8}>
+              <Button
+                type="primary"
+                className={cx("btn")}
+                onClick={() => showEditModal(_baseProduct.slug)}
+              >
+                Chỉnh sửa
+              </Button>
+              <Button
+                type="primary"
+                className={cx("btn")}
+                onClick={() => {
+                  setCurrentBaseProductId(_baseProduct.id);
+                  setCurrentBaseProductSlug(_baseProduct.slug);
+                  setDetailModalOpen(true);
+                }}
+              >
+                Chi tiết
+              </Button>
+            </Flex>
           )}
         />
       </Table>
@@ -232,6 +250,14 @@ const ProductPage = () => {
           open={updateModalOpen}
           slug={currentBaseProductSlug}
           onCancel={handleCancelUpdate}
+        />
+      )}
+      {currentBaseProductId && currentBaseProductSlug && (
+        <ProductChart
+          productId={currentBaseProductId}
+          productSlug={currentBaseProductSlug}
+          open={detailModalOpen}
+          onCancel={() => setDetailModalOpen(false)}
         />
       )}
       {contextHolder}
