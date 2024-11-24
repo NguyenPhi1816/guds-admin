@@ -10,6 +10,7 @@ import {
   TeamOutlined,
   MobileOutlined,
   HomeOutlined,
+  FireOutlined,
 } from "@ant-design/icons";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -49,6 +50,11 @@ const items: MenuItem[] = [
     <TeamOutlined />
   ),
   getItem(<Link href="/order">Đơn hàng</Link>, "/order", <TruckOutlined />),
+  getItem(
+    <Link href="/promotion">Khuyến mãi</Link>,
+    "/promotion",
+    <FireOutlined />
+  ),
 ];
 
 const cx = classNames.bind(styles);

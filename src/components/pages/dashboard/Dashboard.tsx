@@ -12,10 +12,13 @@ import {
   getTop10MostPurchasedCategories,
   getTop10MostPurchasedProducts,
 } from "@/services/statistics";
+import { getSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const cx = classNames.bind(styles);
 
 const Dashboard: React.FC = () => {
+  const router = useRouter();
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
   const [numberOfOrders, setNumberOfOrders] = useState<number>(0);
   const [numberOfPendingOrders, setNumberOfPendingOrders] = useState<number>(0);
@@ -32,21 +35,27 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     async function fetcher() {
       setIsLoading(true);
-      const response = await getOrderStatistic();
-      setTotalRevenue(response["TOTAL_REVENUE"]);
-      setNumberOfOrders(response["TOTAL"]);
-      setNumberOfPendingOrders(response[OrderStatus.PENDING]);
-      setNumberOfShippingOrders(response[OrderStatus.SHIPPING]);
-      setNumberOfSuccessOrders(response[OrderStatus.SUCCESS]);
-      setNumberOfCancelOrders(response[OrderStatus.CANCEL]);
+      const sessionData = await getSession();
+      if (sessionData) {
+        const response = await getOrderStatistic();
+        setTotalRevenue(response["TOTAL_REVENUE"]);
+        setNumberOfOrders(response["TOTAL"]);
+        setNumberOfPendingOrders(response[OrderStatus.PENDING]);
+        setNumberOfShippingOrders(response[OrderStatus.SHIPPING]);
+        setNumberOfSuccessOrders(response[OrderStatus.SUCCESS]);
+        setNumberOfCancelOrders(response[OrderStatus.CANCEL]);
 
-      const top10MostPurchasedProducts = await getTop10MostPurchasedProducts();
-      setTop10MostPurchasedProducts(top10MostPurchasedProducts);
+        const top10MostPurchasedProducts =
+          await getTop10MostPurchasedProducts();
+        setTop10MostPurchasedProducts(top10MostPurchasedProducts);
 
-      const top10MostPurchasedCategories =
-        await getTop10MostPurchasedCategories();
-      setTop10MostPurchasedCategories(top10MostPurchasedCategories);
-      setIsLoading(false);
+        const top10MostPurchasedCategories =
+          await getTop10MostPurchasedCategories();
+        setTop10MostPurchasedCategories(top10MostPurchasedCategories);
+        setIsLoading(false);
+      } else {
+        router.push("/login");
+      }
     }
 
     fetcher();
