@@ -27,7 +27,8 @@
     "react-highlight-words": "^0.20.0",
     "react-quill": "^2.0.0",
     "recharts": "^2.12.7",
-    "sass": "^1.77.6"
+    "sass": "^1.77.6",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@types/node": "^20",

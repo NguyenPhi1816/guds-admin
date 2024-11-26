@@ -6,6 +6,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Divider,
   Dropdown,
   Flex,
   MenuProps,
@@ -18,9 +19,16 @@ import { getSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Session } from "next-auth";
 import { useRouter } from "next/navigation";
+import { io } from "socket.io-client";
+import { Notification } from "@/types/notification";
+import {
+  getNotifications,
+  updateNotificationStatus,
+} from "@/services/notification";
+import day from "@/lib/day";
 
 const cx = classNames.bind(styles);
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 const items: MenuProps["items"] = [
   {
@@ -34,11 +42,17 @@ const AppHeader = () => {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [notiPage, setNotiPage] = useState<number>(1);
+  const [showLoadMore, setShowLoadMore] = useState<boolean>(true);
+  const [unreadNotification, setUnreadNotification] = useState<number>(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     const fetchSession = async () => {
-      const sessionData = await getSession();
-      setSession(sessionData);
+      if (!session) {
+        const sessionData = await getSession();
+        setSession(sessionData);
+      }
     };
     fetchSession();
   }, []);
@@ -55,6 +69,70 @@ const AppHeader = () => {
     }
   }, [session]);
 
+  useEffect(() => {
+    handleLoadNoti();
+  }, [session]);
+
+  const handleLoadNoti = async () => {
+    if (session) {
+      const result = await getNotifications(notiPage);
+      setNotifications((prev) => {
+        const newValue = [...prev];
+        result.data.map(function (item) {
+          const isExist = newValue.findIndex((i) => i.id === item.id);
+          if (isExist === -1) {
+            newValue.push(item);
+          }
+        });
+        return newValue;
+      });
+      setUnreadNotification(result.meta.unreadNotifications);
+      if (result.meta.currentPage < result.meta.totalPages) {
+        setNotiPage(result.meta.currentPage + 1);
+        setShowLoadMore(true);
+      } else {
+        setShowLoadMore(false);
+      }
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    const unreadNotis = notifications.filter((item) => item.isRead === false);
+    const unreadNotiIds = unreadNotis.map((item) => item.id);
+    const newUnreadNotis = await updateNotificationStatus(unreadNotiIds);
+    setUnreadNotification(newUnreadNotis);
+    setTimeout(() => {
+      setNotifications((prev) => {
+        const newValue = prev.map((item) => {
+          if (item.isRead === false) {
+            item.isRead = true;
+          }
+          return item;
+        });
+        return newValue;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (session) {
+      const userId = session.user.user.id;
+
+      const socket = io("http://localhost:8080", {
+        query: { userId },
+      });
+
+      socket.on("new-notification", (notification: Notification) => {
+        setNotifications((prev) => [notification, ...prev]);
+        setUnreadNotification((prev) => prev + 1);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [session]);
+
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -63,16 +141,84 @@ const AppHeader = () => {
     signOut();
   };
 
+  const notificationItems: MenuProps["items"] = notifications.map(
+    (noti, index) => ({
+      key: noti.id,
+      label: (
+        <Flex
+          onClick={() => {}}
+          gap={8}
+          style={{
+            padding: 12,
+            width: 350,
+            borderBottom:
+              index < notifications.length - 1 ? "1px solid #E5E7EB" : "",
+          }}
+        >
+          {noti.isRead === false && <Badge status="success" />}
+          <Flex vertical style={{ flex: 1 }}>
+            <Title level={5} style={{ fontSize: 14 }}>
+              {noti.message}
+            </Title>
+            <Text style={{ fontSize: 12, color: "#666" }}>
+              {day(noti.createAt).fromNow()}
+            </Text>
+          </Flex>
+        </Flex>
+      ),
+    })
+  );
+
+  notificationItems.push({
+    key: "load-more",
+    label: (
+      <>
+        <Flex justify="center">
+          <Button
+            onClick={async (e) => {
+              e.stopPropagation();
+              handleUpdateStatus();
+            }}
+            type="link"
+          >
+            Đánh dấu là đã xem
+          </Button>
+          {showLoadMore && (
+            <Button
+              onClick={async (e) => {
+                e.stopPropagation();
+                handleLoadNoti();
+              }}
+              type="link"
+            >
+              Xem thêm
+            </Button>
+          )}
+        </Flex>
+      </>
+    ),
+  });
+
   return (
     <>
       <Header className={cx("header")}>
         <Flex className={cx("flex")} align="center" justify="end">
           <Space size={"large"}>
-            {/* <Flex className={cx("flex", "mr-1")} align="center" justify="center">
-              <Badge count={5}>
-                <BellOutlined className={cx("icon")} />
-              </Badge>
-            </Flex> */}
+            <Flex
+              className={cx("flex", "mr-1")}
+              align="center"
+              justify="center"
+            >
+              <Dropdown
+                menu={{ items: notificationItems }}
+                placement="bottomLeft"
+                overlayClassName="custom-dropdown-menu"
+              >
+                <Badge count={unreadNotification}>
+                  <BellOutlined className={cx("icon")} />
+                </Badge>
+              </Dropdown>
+            </Flex>
             <Flex className={cx("flex")} align="center" justify="center">
               {session && session.user.user && (
                 <Dropdown menu={{ items }} placement="bottomLeft">
