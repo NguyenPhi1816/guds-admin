@@ -1,49 +1,31 @@
-import styles from "./CategoryModel.module.scss";
+import styles from "./Blog.module.scss";
 import classNames from "classnames/bind";
 
-import {
-  Button,
-  Form,
-  Input,
-  message,
-  Modal,
-  Select,
-  Space,
-  Typography,
-} from "antd";
+import { Button, Form, Input, message, Modal, Typography } from "antd";
 import React, { useEffect, useState } from "react";
 import ImageUpload from "@/components/upload/ImageUpload";
-import {
-  AddCategoryRequest,
-  CategoryResponse,
-  EditCategoryRequest,
-} from "@/types/category";
 import TextArea from "antd/es/input/TextArea";
-import { addCategory, editCategory } from "@/services/category-client";
-
-const { Text } = Typography;
-
-export enum CategoryModalType {
-  CREATE,
-  EDIT,
-}
+import {
+  BlogCategory,
+  CreateBlogCategory,
+  UpdateBlogCategory,
+} from "@/types/blog";
+import { createBlogCategory, updateBlogCategory } from "@/services/blog-client";
 
 interface IAddCategoryModal {
-  type: CategoryModalType;
-  value?: CategoryResponse | null;
+  type: "CREATE" | "UPDATE";
+  value?: BlogCategory | null;
   open: boolean;
-  categories: CategoryResponse[];
   onCancel: () => void;
   onFinish: (message: string) => void;
 }
 
 const cx = classNames.bind(styles);
 
-const AddCategoryModal: React.FC<IAddCategoryModal> = ({
+const CreateUpdateBlogCategory: React.FC<IAddCategoryModal> = ({
   type,
   value,
   open,
-  categories,
   onCancel,
   onFinish,
 }) => {
@@ -56,13 +38,13 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
 
   useEffect(() => {
     switch (type) {
-      case CategoryModalType.CREATE: {
-        setTitle("Thêm danh mục");
+      case "CREATE": {
+        setTitle("Thêm danh mục bài viết");
         form.resetFields();
         break;
       }
-      case CategoryModalType.EDIT: {
-        setTitle("Chỉnh sửa danh mục");
+      case "UPDATE": {
+        setTitle("Chỉnh sửa danh mục bài viết");
         break;
       }
     }
@@ -74,14 +56,9 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
       form.setFieldsValue({
         categoryName: value.name,
         categoryDesc: value.description,
-        categoryParent: value.parent ? value.parent.id : -1,
       });
     }
   }, [value, form]);
-
-  const handleParentChange = (value: number) => {
-    form.setFieldsValue({ categoryParent: value });
-  };
 
   const handleCancel = () => {
     form.resetFields();
@@ -104,25 +81,22 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
 
       setLoading(true);
       switch (type) {
-        case CategoryModalType.CREATE: {
+        case "CREATE": {
           if (image) {
-            const myParentId =
-              values.categoryParent === -1 ? null : values.categoryParent;
-            const request: AddCategoryRequest = {
+            const request: CreateBlogCategory = {
               name: values.categoryName,
               image: image,
               description: values.categoryDesc,
-              parentId: myParentId,
             };
-            const data = await addCategory(request);
+            const data = await createBlogCategory(request);
             if (data) {
               handleCancel();
-              handleFinish("Tạo danh mục thành công");
+              handleFinish("Tạo danh mục bài viết thành công");
             }
           }
           break;
         }
-        case CategoryModalType.EDIT: {
+        case "UPDATE": {
           if (value) {
             let isChanged = false;
             if (image) {
@@ -134,28 +108,17 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
             ) {
               isChanged = true;
             }
-            if (value.parent && values.categoryParent !== value.parent.id) {
-              isChanged = true;
-            } else if (
-              !value.parent &&
-              values.categoryParent !== value.parent
-            ) {
-              isChanged = true;
-            }
 
             if (isChanged) {
-              const myParentId =
-                values.categoryParent === -1 ? null : values.categoryParent;
-              const request: EditCategoryRequest = {
+              const request: UpdateBlogCategory = {
                 id: value.id,
                 name: values.categoryName,
                 existImage: value.image,
                 existImageId: value.imageId,
                 newImage: image,
                 description: values.categoryDesc,
-                parentId: myParentId,
               };
-              const data = await editCategory(request);
+              const data = await updateBlogCategory(request);
               if (data) {
                 handleCancel();
                 handleFinish("Đã lưu thay đổi");
@@ -209,7 +172,7 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
           name="categoryImage"
           rules={[
             {
-              required: type === CategoryModalType.CREATE,
+              required: type === "CREATE",
               message: "Hình ảnh là bắt buộc",
             },
           ]}
@@ -218,10 +181,12 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
         </Form.Item>
         <Form.Item
           name="categoryName"
-          label="Tên danh mục"
-          rules={[{ required: true, message: "Tên danh mục là bắt buộc" }]}
+          label="Tên danh mục bài viết"
+          rules={[
+            { required: true, message: "Tên danh mục bài viết là bắt buộc" },
+          ]}
         >
-          <Input placeholder="Tên danh mục" size="large" />
+          <Input placeholder="Nhập tên danh mục bài viết" size="large" />
         </Form.Item>
         <Form.Item
           name="categoryDesc"
@@ -230,30 +195,10 @@ const AddCategoryModal: React.FC<IAddCategoryModal> = ({
         >
           <TextArea rows={4} placeholder="Mô tả" size="large" />
         </Form.Item>
-        <Form.Item label="Danh mục cha" initialValue={-1} name="categoryParent">
-          <Select
-            size="large"
-            onChange={handleParentChange}
-            showSearch
-            placeholder="Tìm kiếm danh mục"
-            filterOption={(input, option) =>
-              ((option?.children || "") as string)
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-          >
-            <Select.Option value={-1}>Không</Select.Option>
-            {categories.map((category) => (
-              <Select.Option key={category.id} value={category.id}>
-                {category.name}
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
       </Form>
       {contextHolder}
     </Modal>
   );
 };
 
-export default AddCategoryModal;
+export default CreateUpdateBlogCategory;

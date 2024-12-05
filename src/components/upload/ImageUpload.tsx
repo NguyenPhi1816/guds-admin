@@ -60,7 +60,7 @@ const ImageUpload: React.FC<IImageUpload> = ({
     getBase64(file as FileType, (url) => {
       onChange(file, url);
     });
-    return "";
+    return "http://localhost:8080/api/images/upload";
   };
 
   return (

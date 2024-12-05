@@ -76,22 +76,24 @@ const AppHeader = () => {
   const handleLoadNoti = async () => {
     if (session) {
       const result = await getNotifications(notiPage);
-      setNotifications((prev) => {
-        const newValue = [...prev];
-        result.data.map(function (item) {
-          const isExist = newValue.findIndex((i) => i.id === item.id);
-          if (isExist === -1) {
-            newValue.push(item);
-          }
+      if (result.data && result.meta) {
+        setNotifications((prev) => {
+          const newValue = [...prev];
+          result.data.map(function (item) {
+            const isExist = newValue.findIndex((i) => i.id === item.id);
+            if (isExist === -1) {
+              newValue.push(item);
+            }
+          });
+          return newValue;
         });
-        return newValue;
-      });
-      setUnreadNotification(result.meta.unreadNotifications);
-      if (result.meta.currentPage < result.meta.totalPages) {
-        setNotiPage(result.meta.currentPage + 1);
-        setShowLoadMore(true);
-      } else {
-        setShowLoadMore(false);
+        setUnreadNotification(result.meta.unreadNotifications);
+        if (result.meta.currentPage < result.meta.totalPages) {
+          setNotiPage(result.meta.currentPage + 1);
+          setShowLoadMore(true);
+        } else {
+          setShowLoadMore(false);
+        }
       }
     }
   };
@@ -146,7 +148,7 @@ const AppHeader = () => {
       key: noti.id,
       label: (
         <Flex
-          onClick={() => {}}
+          onClick={() => router.push("/order")}
           gap={8}
           style={{
             padding: 12,

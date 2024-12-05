@@ -11,6 +11,7 @@ import {
   MobileOutlined,
   HomeOutlined,
   FireOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -55,6 +56,7 @@ const items: MenuItem[] = [
     "/promotion",
     <FireOutlined />
   ),
+  getItem(<Link href="/blog">Bài viết</Link>, "/blog", <FileTextOutlined />),
 ];
 
 const cx = classNames.bind(styles);

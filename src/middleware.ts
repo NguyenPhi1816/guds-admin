@@ -6,6 +6,19 @@ import {
 import { auth } from "./auth";
 import { NextResponse } from "next/server";
 
+function isTokenExpired(token: string) {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64").toString()
+    );
+    const exp = payload.exp * 1000;
+    return Date.now() > exp;
+  } catch (error) {
+    console.error("Invalid token", error);
+    return true;
+  }
+}
+
 export default auth((req) => {
   const { nextUrl } = req;
   const pathname = "/" + nextUrl.pathname.split("/")[1];
@@ -18,8 +31,15 @@ export default auth((req) => {
   }
 
   if (!isPublicRoute && !isAuthenticated) {
-    console.log("Unauthorized");
     return NextResponse.redirect(new URL(DEFAULT_REDIRECT, nextUrl));
+  }
+
+  const authentication = req.auth;
+  if (authentication) {
+    const accessToken = authentication.user.accessToken;
+    if (isTokenExpired(accessToken)) {
+      return NextResponse.redirect(new URL(DEFAULT_REDIRECT, nextUrl));
+    }
   }
 
   return NextResponse.next();

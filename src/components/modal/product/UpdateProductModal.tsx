@@ -549,6 +549,12 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                 onChange={(value) => {
                   setCategoryIds(value);
                 }}
+                showSearch
+                filterOption={(input, option) =>
+                  ((option?.children || "") as string)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               >
                 {categories.map((category) => (
                   <Select.Option key={category.id} value={category.id}>
@@ -579,6 +585,12 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
                 size="large"
                 placeholder="Vui lòng chọn nhãn hàng"
                 onChange={(value) => setBrandId(value)}
+                showSearch
+                filterOption={(input, option) =>
+                  ((option?.children || "") as string)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               >
                 <Select.Option value={-1} disabled>
                   Chọn một nhãn hàng
