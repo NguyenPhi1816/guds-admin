@@ -23,7 +23,6 @@ import {
 import { getBlogDetail } from "@/services/blog";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import blog from ".";
 
 interface IAddCategoryModal {
   blogId?: number;
