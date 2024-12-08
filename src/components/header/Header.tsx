@@ -222,7 +222,7 @@ const AppHeader = () => {
               </Dropdown>
             </Flex>
             <Flex className={cx("flex")} align="center" justify="center">
-              {session && session.user.user && (
+              {session && session.user && session.user.user && (
                 <Dropdown menu={{ items }} placement="bottomLeft">
                   <Space>
                     <Text className={cx("user-name")}>
