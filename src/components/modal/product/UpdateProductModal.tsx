@@ -50,7 +50,8 @@ import {
 import { CategoryResponse } from "@/types/category";
 import { Brand } from "@/types/brand";
 import ImageUpload from "@/components/upload";
-import ReactQuill from "react-quill";
+import dynamic from "next/dynamic";
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import "react-quill/dist/quill.snow.css";
 import {
   addBPImage,

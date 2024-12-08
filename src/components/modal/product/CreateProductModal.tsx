@@ -24,7 +24,8 @@ import { getAllCategory } from "@/services/category";
 import { getAllBrand } from "@/services/brand";
 import { CategoryResponse } from "@/types/category";
 import { Brand } from "@/types/brand";
-import ReactQuill from "react-quill";
+import dynamic from "next/dynamic";
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import "react-quill/dist/quill.snow.css";
 import {
   DeleteOutlined,
