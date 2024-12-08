@@ -60,7 +60,8 @@ export const getOrderDetail = async (orderId: number): Promise<OrderDetail> => {
 export const updateOrderStatus = async (
   orderId: number,
   status: OrderStatus
-): Promise<OrderDetail> => {
+): Promise<any> => {
+  console.log(orderId, status);
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
@@ -71,7 +72,7 @@ export const updateOrderStatus = async (
         },
         method: "PUT",
       });
-      const result: OrderDetail | ErrorResponse = await res.json();
+      const result: any | ErrorResponse = await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);

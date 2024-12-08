@@ -13,7 +13,7 @@ export const authenticate = async (
 ): Promise<LoginResponse | undefined> => {
   try {
     const { phoneNumber, password } = request;
-    const res = await fetch(`${api}/auth/login`, {
+    const res = await fetch(`${api}/auth/login-admin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

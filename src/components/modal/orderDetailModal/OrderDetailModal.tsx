@@ -75,7 +75,8 @@ const OrderDetailModal: React.FC<IOrderDetailModal> = ({
     try {
       if (orderDetail) {
         setLoading(true);
-        const res = await updateOrderStatus(orderDetail.id, status);
+        await updateOrderStatus(orderDetail.id, status);
+        const res = await getOrderDetail(orderDetail.id);
         setOrderDetail(res);
         handleCancel();
         onRefresh("Cập nhật trạng thái thành công");
