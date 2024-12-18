@@ -120,7 +120,7 @@ const AppHeader = () => {
     if (session) {
       const userId = session.user.user.id;
 
-      const socket = io("http://localhost:8080", {
+      const socket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL, {
         query: { userId },
       });
 
