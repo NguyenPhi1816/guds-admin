@@ -124,7 +124,7 @@ const AppHeader = () => {
         query: { userId },
       });
 
-      console.log(userId);
+      console.log(socket);
 
       socket.on("new-notification", (notification: Notification) => {
         setNotifications((prev) => [notification, ...prev]);
