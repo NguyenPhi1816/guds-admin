@@ -121,10 +121,13 @@ const AppHeader = () => {
       const userId = session.user.user.id;
 
       const socket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL, {
-        query: { userId },
+        path: "/socket.io",
+        transports: ["websocket"],
+        withCredentials: true,
+        query: {
+          userId: userId,
+        },
       });
-
-      console.log(socket);
 
       socket.on("new-notification", (notification: Notification) => {
         setNotifications((prev) => [notification, ...prev]);
