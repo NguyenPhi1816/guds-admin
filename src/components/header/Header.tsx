@@ -124,6 +124,8 @@ const AppHeader = () => {
         query: { userId },
       });
 
+      console.log(userId);
+
       socket.on("new-notification", (notification: Notification) => {
         setNotifications((prev) => [notification, ...prev]);
         setUnreadNotification((prev) => prev + 1);
