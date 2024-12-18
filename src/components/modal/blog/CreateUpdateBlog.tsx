@@ -73,6 +73,7 @@ const CreateUpdateBlog: React.FC<IAddCategoryModal> = ({
         const blogDetail = await getBlogDetail(blogId);
         setImageUrl(blogDetail.image);
         setData(blogDetail);
+        setContent(blogDetail.content);
         form.setFieldsValue({
           title: blogDetail.title,
           summary: blogDetail.summary,
