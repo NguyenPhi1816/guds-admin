@@ -178,7 +178,7 @@ export const exportSalesReport = async (fromDate: string, toDate: string) => {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const response = await fetch(
+      const res = await fetch(
         `${process.env.NEXT_PUBLIC_GUDS_API}/export-sales-report?fromDate=${fromDate}&toDate=${toDate}`,
         {
           headers: {
@@ -188,26 +188,13 @@ export const exportSalesReport = async (fromDate: string, toDate: string) => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Lỗi tải file báo cáo");
+      const result: any[] | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
       }
 
-      // Chuyển đổi response thành blob
-      const blob = await response.blob();
-
-      console.log(response);
-
-      // Tạo URL cho file blob
-      const url = window.URL.createObjectURL(blob);
-
-      // Tạo thẻ <a> để tải file
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Sales_Report_${fromDate}_to_${toDate}.xlsx`;
-      link.click();
-
-      // Giải phóng URL
-      window.URL.revokeObjectURL(url);
+      return result;
     } else {
       throw new Error("Phiên làm việc hết hạn");
     }

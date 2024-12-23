@@ -12,6 +12,8 @@ import { getAllProduct } from "@/services/product";
 import { BaseProduct } from "@/types/product";
 import { FileExcelFilled, FileExcelOutlined } from "@ant-design/icons";
 import { exportSalesReport } from "@/services/products-client";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const AllProductPurchasesChart = () => {
   const [dateRange, setDateRange] = useState<
@@ -121,10 +123,51 @@ const AllProductPurchasesChart = () => {
 
   const handleExportExcel = async () => {
     if (dateRange && dateRange[0] && dateRange[1]) {
-      await exportSalesReport(
+      const dataExcel = await exportSalesReport(
         dateRange[0].format("YYYY-MM-DD"),
         dateRange[1].format("YYYY-MM-DD")
       );
+
+      if (dataExcel) {
+        // Tạo workbook và worksheet
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Report");
+
+        // Định nghĩa tiêu đề cột
+        worksheet.columns = [
+          { header: "STT", key: "index", width: 10 },
+          { header: "Mã nhóm sản phẩm", key: "baseProductCode", width: 15 },
+          { header: "Tên nhóm sản phẩm", key: "baseProductName", width: 50 },
+          {
+            header: "Mã biến thể sản phẩm",
+            key: "productVariantCode",
+            width: 15,
+          },
+          {
+            header: "Tên biến thể sản phẩm",
+            key: "optionValueName",
+            width: 50,
+          },
+          { header: "Số lượng bán", key: "quantitySold", width: 15 },
+          { header: "Tổng tiền", key: "totalAmount", width: 20 },
+        ];
+
+        // Thêm dữ liệu vào worksheet
+        dataExcel.forEach((item) => {
+          worksheet.addRow(item);
+        });
+
+        // Tạo file Excel
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        // Lưu file
+        saveAs(
+          new Blob([buffer]),
+          `bao_cao_doanh_thu_${dateRange[0].format(
+            "YYYY-MM-DD"
+          )}_${dateRange[1].format("YYYY-MM-DD")}.xlsx`
+        );
+      }
     }
   };
 
