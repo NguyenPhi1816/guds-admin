@@ -184,7 +184,7 @@ export const exportSalesReport = async (fromDate: string, toDate: string) => {
           headers: {
             Authorization: "Bearer " + accessToken,
           },
-          method: "GET",
+          method: "POST",
         }
       );
 
