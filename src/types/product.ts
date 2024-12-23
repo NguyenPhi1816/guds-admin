@@ -152,3 +152,19 @@ export type AddBPImage = {
   baseProductId: number;
   images: File[];
 };
+
+export type InventoryLog = {
+  id: number;
+  productVariantId: number;
+  oldQuantity: number;
+  newQuantity: number;
+  purchasePrice: number;
+  changedAt: string;
+};
+
+export type CreateInventoryLog = {
+  productVariantId: number;
+  oldQuantity: number;
+  newQuantity: number;
+  purchasePrice: number;
+};

@@ -173,3 +173,43 @@ export const updateProductVariant = async (
     throw error;
   }
 };
+
+export const exportSalesReport = async (fromDate: string, toDate: string) => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_GUDS_API}/export-sales-report?fromDate=${fromDate}&toDate=${toDate}`,
+        {
+          headers: {
+            Authorization: "Bearer " + accessToken,
+          },
+          method: "GET",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Lỗi tải file báo cáo");
+      }
+
+      // Chuyển đổi response thành blob
+      const blob = await response.blob();
+
+      // Tạo URL cho file blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Tạo thẻ <a> để tải file
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Sales_Report_${fromDate}_to_${toDate}.xlsx`;
+      link.click();
+
+      // Giải phóng URL
+      window.URL.revokeObjectURL(url);
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    console.error("Lỗi:", error);
+  }
+};

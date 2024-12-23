@@ -6,6 +6,7 @@ export type GetProductStatisticsRequest = {
 };
 
 export type GetPurchasesStatisticsRequest = {
+  baseProductIds: number[];
   fromDate: string;
   toDate: string;
 };

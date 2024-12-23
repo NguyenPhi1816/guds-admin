@@ -11,6 +11,8 @@ import {
   UpdateProductVariantRequest,
   UpdateBaseProductStatusRequest,
   BaseProductDetailAdmin,
+  CreateInventoryLog,
+  InventoryLog,
 } from "@/types/product";
 import { api } from "./api";
 import { ErrorResponse } from "@/types/error";
@@ -227,6 +229,62 @@ export const updateProductVariant = async (
         body: JSON.stringify(updateProductVariantRequest),
       });
       const result: ProductVariantResponse | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
+      return result;
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const createInventoryLog = async (
+  data: CreateInventoryLog
+): Promise<InventoryLog> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const res = await fetch(`${api}/create-inventory-log`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + accessToken,
+        },
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      const result: InventoryLog | ErrorResponse = await res.json();
+
+      if ("error" in result) {
+        throw new Error(result.message);
+      }
+
+      return result;
+    } else {
+      throw new Error("Phiên làm việc hết hạn");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getInventoryLog = async (
+  productVariantId: number
+): Promise<InventoryLog[]> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      const res = await fetch(`${api}/get-inventory-log/${productVariantId}`, {
+        headers: {
+          Authorization: "Bearer " + accessToken,
+        },
+        method: "GET",
+      });
+      const result: InventoryLog[] | ErrorResponse = await res.json();
 
       if ("error" in result) {
         throw new Error(result.message);

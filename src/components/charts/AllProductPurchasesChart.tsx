@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
-import { Button, Card, DatePicker, Space, Spin } from "antd";
+import { Button, Card, DatePicker, message, Select, Space, Spin } from "antd";
 import day from "@/lib/day";
 import {
   GetProductStatisticsResponse,
@@ -8,6 +8,10 @@ import {
 } from "@/types/statistics";
 import dayjs, { Dayjs } from "dayjs";
 import { getPurchasesStatistics } from "@/services/statistics";
+import { getAllProduct } from "@/services/product";
+import { BaseProduct } from "@/types/product";
+import { FileExcelFilled, FileExcelOutlined } from "@ant-design/icons";
+import { exportSalesReport } from "@/services/products-client";
 
 const AllProductPurchasesChart = () => {
   const [dateRange, setDateRange] = useState<
@@ -15,15 +19,39 @@ const AllProductPurchasesChart = () => {
   >(null);
   const [data, setData] = useState<GetProductStatisticsResponse[] | null>();
   const [options, setOptions] = useState<any>();
+  const [messageApi, contextHolder] = message.useMessage();
+  const [baseProducts, setBaseProducts] = useState<BaseProduct[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
 
   useEffect(() => {
-    handleWeekClick();
+    async function fetcher() {
+      try {
+        const res = await getAllProduct();
+        if (res) {
+          setBaseProducts(res);
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          messageApi.open({
+            type: "error",
+            content: error.message,
+          });
+        }
+      }
+    }
+
+    fetcher();
+  }, []);
+
+  useEffect(() => {
+    handleMonthClick();
   }, []);
 
   useEffect(() => {
     async function fetcher() {
       if (dateRange && dateRange[0] && dateRange[1]) {
         const request: GetPurchasesStatisticsRequest = {
+          baseProductIds: selectedProducts,
           fromDate: dateRange[0].format("YYYY-MM-DD"),
           toDate: dateRange[1].format("YYYY-MM-DD"),
         };
@@ -35,7 +63,7 @@ const AllProductPurchasesChart = () => {
             text: "Tổng số lượt mua sản phẩm",
             left: "center",
             textStyle: {
-              fontFamily: "Inter, sans-serif", // Thay đổi font chữ ở đây
+              fontFamily: "Inter, sans-serif",
               fontSize: 16,
             },
           },
@@ -70,7 +98,7 @@ const AllProductPurchasesChart = () => {
     }
 
     fetcher();
-  }, [dateRange]);
+  }, [dateRange, selectedProducts]);
 
   // Hàm cập nhật dateRange khi chọn khoảng thời gian
   const handleDateChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
@@ -91,6 +119,15 @@ const AllProductPurchasesChart = () => {
     setDateRange([lastMonth, today]); // Cập nhật dateRange là 30 ngày gần nhất
   };
 
+  const handleExportExcel = async () => {
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      await exportSalesReport(
+        dateRange[0].format("YYYY-MM-DD"),
+        dateRange[1].format("YYYY-MM-DD")
+      );
+    }
+  };
+
   return (
     <Card
       title="Biểu Đồ Tổng Số Lượt Mua Sản Phẩm"
@@ -103,6 +140,26 @@ const AllProductPurchasesChart = () => {
         </Space>
         {/* DatePicker */}
         <DatePicker.RangePicker value={dateRange} onChange={handleDateChange} />
+        <Select
+          style={{ width: 500 }}
+          mode="multiple"
+          showSearch
+          filterOption={(input, option) =>
+            ((option?.label as string) ?? "")
+              .toLowerCase()
+              .includes(input.toLowerCase())
+          }
+          placeholder="Chọn sản phẩm áp dụng"
+          options={baseProducts.map((baseProduct) => ({
+            value: baseProduct.id,
+            label: baseProduct.name,
+          }))}
+          onChange={(value: number[]) => setSelectedProducts(value)}
+        />
+        <Button onClick={handleExportExcel}>
+          <FileExcelOutlined />
+          Xuất Excel
+        </Button>
       </Space>
       <div style={{ padding: "48px 24px" }}>
         {options ? (

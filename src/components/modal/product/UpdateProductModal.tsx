@@ -13,6 +13,7 @@ import {
   Modal,
   Select,
   Space,
+  Table,
   Tag,
   Upload,
   UploadProps,
@@ -25,6 +26,7 @@ import {
   CreateBaseProductRequest,
   CreateOptionValueRequest,
   CreateProductVariantRequest,
+  InventoryLog,
   OptionValuesRequest,
   OptionValuesResponse,
   UpdateBaseProductRequest,
@@ -32,10 +34,12 @@ import {
   ValuesResponse,
 } from "@/types/product";
 import {
+  createInventoryLog,
   createOptionValues,
   createProductVariant,
   deleteBaseProductImage,
   getBaseProductBySlug,
+  getInventoryLog,
   updateBaseProduct,
   updateProductMainImage,
 } from "@/services/product";
@@ -60,6 +64,9 @@ import {
 } from "@/services/products-client";
 import { getAllCategory } from "@/services/category";
 import { getAllBrand } from "@/services/brand";
+import Column from "antd/es/table/Column";
+import { formatCurrency } from "@/formater/CurrencyFormater";
+import day from "@/lib/day";
 
 const { confirm } = Modal;
 const { Dragger } = Upload;
@@ -92,6 +99,7 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   const [brands, setBrands] = useState<Brand[]>([]);
 
   const [form] = Form.useForm();
+  const [formUpdateQuantity] = Form.useForm();
   const [data, setData] = useState<BaseProductDetailAdmin>();
   const [baseProductId, setBaseProductId] = useState<number>();
   const [name, setName] = useState<string>("");
@@ -109,6 +117,13 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
   const [editVariantIndex, setEditVariantIndex] = useState<number>();
   const [loading, setLoading] = useState<boolean>(false);
   const [BPLoading, setBPLoading] = useState<boolean>(false);
+  const [openInventoryModal, setOpenInventoryModal] = useState<boolean>(false);
+  const [currentProductVariantId, setCurrentProductVariantId] =
+    useState<number>(-1);
+  const [oldQuantity, setOldQuantity] = useState<number>(0);
+  const [showInventoryLogsModal, setShowInventoryLogsModal] =
+    useState<boolean>(false);
+  const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
 
   // Load categories and brands from database
   useEffect(() => {
@@ -428,346 +443,562 @@ const UpdateProductModal: React.FC<IUpdateProductModal> = ({
     }
   };
 
+  const handleOpenInventoryModal = (
+    currentProductVariantId: number,
+    oldQuantity: number
+  ) => {
+    setCurrentProductVariantId(currentProductVariantId);
+    setOldQuantity(oldQuantity);
+    setOpenInventoryModal(true);
+  };
+
+  const handleCloseInventoryModal = () => {
+    setCurrentProductVariantId(-1);
+    setOldQuantity(0);
+    setOpenInventoryModal(false);
+  };
+
+  const handleUpdateProductVariantQuantity = async () => {
+    await formUpdateQuantity.validateFields().then(async (data) => {
+      const inventoryLog = await createInventoryLog(data);
+      setVariants((prev) => {
+        const newValue = [...prev];
+        const myVariant = newValue.find(
+          (item) => item.id === inventoryLog.productVariantId
+        );
+        if (myVariant) {
+          myVariant.quantity = inventoryLog.newQuantity;
+        }
+        return newValue;
+      });
+      handleCloseInventoryModal();
+    });
+  };
+
+  const handleGetInventoryLog = async (productVariantId: number) => {
+    const inventoryLogs = await getInventoryLog(productVariantId);
+    setInventoryLogs(inventoryLogs);
+    setShowInventoryLogsModal(true);
+  };
+
+  const handleCloseInventoryLogModal = () => {
+    setShowInventoryLogsModal(false);
+  };
+
   return (
-    <Modal
-      destroyOnClose={true}
-      title={"Thêm sản phẩm"}
-      open={open}
-      onCancel={() => handleCancel()}
-      footer={[]}
-      className={cx("modal")}
-      afterClose={() => form.resetFields()}
-    >
-      <Flex vertical>
-        <Form
-          form={form}
-          name="UpdateProduct"
-          layout="vertical"
-          requiredMark="optional"
-          className={cx("form")}
-        >
-          <Form.Item
-            name="images"
-            label="Hình ảnh"
-            rules={[
-              {
-                required: true,
-                validator: (_, value) =>
-                  baseProductImages.length + baseProductImageUrls.length >= 2
-                    ? Promise.resolve()
-                    : Promise.reject(
-                        new Error("Vui lòng tải lên đủ 3 hình ảnh")
-                      ),
-              },
-            ]}
+    <>
+      <Modal
+        destroyOnClose={true}
+        title={"Thêm sản phẩm"}
+        open={open}
+        onCancel={() => handleCancel()}
+        footer={[]}
+        className={cx("modal")}
+        afterClose={() => form.resetFields()}
+      >
+        <Flex vertical>
+          <Form
+            form={form}
+            name="UpdateProduct"
+            layout="vertical"
+            requiredMark="optional"
+            className={cx("form")}
           >
-            <Dragger {...props}>
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined />
-              </p>
-              <p className="ant-upload-text">
-                Click or drag file to this area to upload
-              </p>
-              <p className="ant-upload-hint">
-                Support for a single or bulk upload. Strictly prohibited from
-                uploading company data or other banned files.
-              </p>
-            </Dragger>
-            <Space
-              size={"middle"}
-              style={{
-                marginTop: "16px",
-                padding: "16px 0",
-                width: "100%",
-                overflowX: "scroll",
-              }}
-            >
-              {baseProductImageUrls.map((item, index) => {
-                if (mainImageId === item.id)
-                  return (
-                    <Badge.Ribbon
-                      text="Ảnh chính"
-                      color="#edcf5d"
-                      key={item.id}
-                    >
-                      <div
-                        className={cx("preview", "main")}
-                        onClick={() => handleChangeMainImage(item.id)}
-                      >
-                        <img className={cx("preview-img")} src={item.path} />
-                        <button className={cx("preview-btn")}>
-                          <DeleteOutlined
-                            style={{ color: "#f5222d" }}
-                            onClick={(e) => handleDeleteImages(e, index)}
-                          />
-                        </button>
-                      </div>
-                    </Badge.Ribbon>
-                  );
-                return (
-                  <div
-                    className={cx("preview")}
-                    onClick={() => handleChangeMainImage(item.id)}
-                    key={item.id}
-                  >
-                    <img className={cx("preview-img")} src={item.path} />
-                    <button className={cx("preview-btn")}>
-                      <DeleteOutlined
-                        style={{ color: "#f5222d" }}
-                        onClick={(e) => handleDeleteImages(e, index)}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
-            </Space>
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label="Tên sản phẩm"
-            initialValue={name}
-            rules={[{ required: true, message: "Vui lòng nhập tên sản phẩm" }]}
-          >
-            <Input
-              placeholder="Tên sản phẩm"
-              size="large"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </Form.Item>
-          <Flex gap={16}>
             <Form.Item
-              name="category"
-              label="Danh mục sản phẩm"
-              style={{ flex: 1 }}
-              rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
-            >
-              <Select
-                size="large"
-                mode="multiple"
-                allowClear
-                placeholder="Vui lòng chọn danh mục"
-                value={categoryIds}
-                onChange={(value) => {
-                  setCategoryIds(value);
-                }}
-                showSearch
-                filterOption={(input, option) =>
-                  ((option?.children || "") as string)
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              >
-                {categories.map((category) => (
-                  <Select.Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item
-              name="brand"
-              label="Nhãn hàng"
-              style={{ flex: 1 }}
+              name="images"
+              label="Hình ảnh"
               rules={[
-                { required: true, message: "Vui lòng chọn nhãn hàng" },
                 {
-                  validator: (_, value) => {
-                    if (value === -1) {
-                      return Promise.reject(
-                        new Error("Vui lòng chọn một nhãn hàng hợp lệ")
-                      );
-                    }
-                    return Promise.resolve();
-                  },
+                  required: true,
+                  validator: (_, value) =>
+                    baseProductImages.length + baseProductImageUrls.length >= 2
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error("Vui lòng tải lên đủ 3 hình ảnh")
+                        ),
                 },
               ]}
             >
-              <Select
-                size="large"
-                placeholder="Vui lòng chọn nhãn hàng"
-                onChange={(value) => setBrandId(value)}
-                showSearch
-                filterOption={(input, option) =>
-                  ((option?.children || "") as string)
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
+              <Dragger {...props}>
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">
+                  Click or drag file to this area to upload
+                </p>
+                <p className="ant-upload-hint">
+                  Support for a single or bulk upload. Strictly prohibited from
+                  uploading company data or other banned files.
+                </p>
+              </Dragger>
+              <Space
+                size={"middle"}
+                style={{
+                  marginTop: "16px",
+                  padding: "16px 0",
+                  width: "100%",
+                  overflowX: "scroll",
+                }}
               >
-                <Select.Option value={-1} disabled>
-                  Chọn một nhãn hàng
-                </Select.Option>
-                {brands.map((brand) => (
-                  <Select.Option key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Flex>
-          <Form.Item name="option-value" label="Tùy chọn - giá trị tùy chọn">
-            <Flex vertical>
-              <Space direction="vertical">
-                {option.length > 0 &&
-                  option.map((item, optionIndex) => (
-                    <div key={optionIndex}>
-                      <Flex gap={16} align="center">
-                        <Input
-                          style={{ flex: 1 }}
-                          disabled={disable}
-                          placeholder="Vui lòng nhập tùy chọn"
-                          size="large"
-                          defaultValue={item.option}
+                {baseProductImageUrls.map((item, index) => {
+                  if (mainImageId === item.id)
+                    return (
+                      <Badge.Ribbon
+                        text="Ảnh chính"
+                        color="#edcf5d"
+                        key={item.id}
+                      >
+                        <div
+                          className={cx("preview", "main")}
+                          onClick={() => handleChangeMainImage(item.id)}
+                        >
+                          <img className={cx("preview-img")} src={item.path} />
+                          <button className={cx("preview-btn")}>
+                            <DeleteOutlined
+                              style={{ color: "#f5222d" }}
+                              onClick={(e) => handleDeleteImages(e, index)}
+                            />
+                          </button>
+                        </div>
+                      </Badge.Ribbon>
+                    );
+                  return (
+                    <div
+                      className={cx("preview")}
+                      onClick={() => handleChangeMainImage(item.id)}
+                      key={item.id}
+                    >
+                      <img className={cx("preview-img")} src={item.path} />
+                      <button className={cx("preview-btn")}>
+                        <DeleteOutlined
+                          style={{ color: "#f5222d" }}
+                          onClick={(e) => handleDeleteImages(e, index)}
                         />
-                        <Flex className={cx("tags-input")} align="center">
-                          {item.values.map((value, valueIndex) => (
-                            <Tag
-                              key={valueIndex}
-                              style={{ height: "fit-content" }}
-                            >
-                              {value}
-                            </Tag>
-                          ))}
-                          <Input
-                            variant="borderless"
-                            className="borderless-tags-input"
-                            disabled={disable}
-                            placeholder="Vui lòng nhập giá trị"
-                            size="large"
-                            value={valueArr[optionIndex]}
-                            onChange={(e) =>
-                              setValueArr((prev) => {
-                                const newValueArr = [...prev];
-                                newValueArr[optionIndex] =
-                                  e.currentTarget.value;
-                                return newValueArr;
-                              })
-                            }
-                          />
-                        </Flex>
-                      </Flex>
-                      <Divider />
+                      </button>
                     </div>
-                  ))}
+                  );
+                })}
               </Space>
-            </Flex>
-          </Form.Item>
-          {variants.map((variant, index) => {
-            const valuesStr =
-              variant.optionValues.length === 0
-                ? "Mặc định"
-                : variant.optionValues.join(", ");
-            return (
+            </Form.Item>
+            <Form.Item
+              name="name"
+              label="Tên sản phẩm"
+              initialValue={name}
+              rules={[
+                { required: true, message: "Vui lòng nhập tên sản phẩm" },
+              ]}
+            >
+              <Input
+                placeholder="Tên sản phẩm"
+                size="large"
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Form.Item>
+            <Flex gap={16}>
               <Form.Item
-                key={Math.random()}
-                name={`variant-${index}`}
-                label={`Tùy chọn: ${valuesStr}`}
+                name="category"
+                label="Danh mục sản phẩm"
+                style={{ flex: 1 }}
+                rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
+              >
+                <Select
+                  size="large"
+                  mode="multiple"
+                  allowClear
+                  placeholder="Vui lòng chọn danh mục"
+                  value={categoryIds}
+                  onChange={(value) => {
+                    setCategoryIds(value);
+                  }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    ((option?.children || "") as string)
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {categories.map((category) => (
+                    <Select.Option key={category.id} value={category.id}>
+                      {category.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item
+                name="brand"
+                label="Nhãn hàng"
+                style={{ flex: 1 }}
                 rules={[
+                  { required: true, message: "Vui lòng chọn nhãn hàng" },
                   {
-                    required: true,
-                    validator: (_, value) =>
-                      variants[index] != null
-                        ? Promise.resolve()
-                        : Promise.reject(
-                            new Error("Vui lòng tải lên đủ 3 hình ảnh")
-                          ),
+                    validator: (_, value) => {
+                      if (value === -1) {
+                        return Promise.reject(
+                          new Error("Vui lòng chọn một nhãn hàng hợp lệ")
+                        );
+                      }
+                      return Promise.resolve();
+                    },
                   },
                 ]}
               >
-                <Flex gap={16} align="center">
-                  <ImageUpload
-                    disabled={editVariantIndex !== index}
-                    defaultValue={variant.imageUrl}
-                    onChange={(file, url) => {
-                      handleVariantChange(index, "image", file);
-                      handleVariantChange(index, "imageUrl", url);
-                    }}
-                  />
-                  <InputNumber
-                    disabled={editVariantIndex !== index}
-                    defaultValue={variant.price}
-                    controls={false}
-                    min={1000}
-                    formatter={(value) =>
-                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    style={{ flex: 3, height: "40px", padding: "4px 0" }}
-                    onChange={(value) =>
-                      handleVariantChange(index, "price", value)
-                    }
-                    placeholder="Giá sản phẩm"
-                  />
-                  <InputNumber
-                    disabled={editVariantIndex !== index}
-                    defaultValue={variant.quantity}
-                    controls
-                    min={0}
-                    style={{ flex: 1, height: "40px", padding: "4px 0" }}
-                    onChange={(value) =>
-                      handleVariantChange(index, "quantity", value)
-                    }
-                    placeholder="Số lượng sản phẩm"
-                  />
-                  {editVariantIndex === index ? (
-                    <>
-                      <Button
-                        loading={loading}
-                        type="primary"
-                        style={{ width: "fit-content" }}
-                        onClick={() => handleEditVariant(variant.id)}
-                      >
-                        <SaveOutlined />
-                        Lưu
-                      </Button>
-                      <Button
-                        type="primary"
-                        danger
-                        style={{ width: "fit-content" }}
-                        onClick={handleResetVariant}
-                      >
-                        <CloseCircleOutlined />
-                        Hủy
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      disabled={editVariantIndex !== undefined}
-                      style={{ width: "fit-content" }}
-                      onClick={() => setEditVariantIndex(index)}
-                    >
-                      <EditOutlined />
-                      Chỉnh sửa
-                    </Button>
-                  )}
-                </Flex>
-                <Divider />
+                <Select
+                  size="large"
+                  placeholder="Vui lòng chọn nhãn hàng"
+                  onChange={(value) => setBrandId(value)}
+                  showSearch
+                  filterOption={(input, option) =>
+                    ((option?.children || "") as string)
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  <Select.Option value={-1} disabled>
+                    Chọn một nhãn hàng
+                  </Select.Option>
+                  {brands.map((brand) => (
+                    <Select.Option key={brand.id} value={brand.id}>
+                      {brand.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
-            );
-          })}
-          <Form.Item
-            name="desc"
-            label="Mô tả"
-            rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+            </Flex>
+            <Form.Item name="option-value" label="Tùy chọn - giá trị tùy chọn">
+              <Flex vertical>
+                <Space direction="vertical">
+                  {option.length > 0 &&
+                    option.map((item, optionIndex) => (
+                      <div key={optionIndex}>
+                        <Flex gap={16} align="center">
+                          <Input
+                            style={{ flex: 1 }}
+                            disabled={disable}
+                            placeholder="Vui lòng nhập tùy chọn"
+                            size="large"
+                            defaultValue={item.option}
+                          />
+                          <Flex className={cx("tags-input")} align="center">
+                            {item.values.map((value, valueIndex) => (
+                              <Tag
+                                key={valueIndex}
+                                style={{ height: "fit-content" }}
+                              >
+                                {value}
+                              </Tag>
+                            ))}
+                            <Input
+                              variant="borderless"
+                              className="borderless-tags-input"
+                              disabled={disable}
+                              placeholder="Vui lòng nhập giá trị"
+                              size="large"
+                              value={valueArr[optionIndex]}
+                              onChange={(e) =>
+                                setValueArr((prev) => {
+                                  const newValueArr = [...prev];
+                                  newValueArr[optionIndex] =
+                                    e.currentTarget.value;
+                                  return newValueArr;
+                                })
+                              }
+                            />
+                          </Flex>
+                        </Flex>
+                        <Divider />
+                      </div>
+                    ))}
+                </Space>
+              </Flex>
+            </Form.Item>
+            {variants.map((variant, index) => {
+              const valuesStr =
+                variant.optionValues.length === 0
+                  ? "Mặc định"
+                  : variant.optionValues.join(", ");
+              return (
+                <Form.Item
+                  key={Math.random()}
+                  name={`variant-${index}`}
+                  label={`Tùy chọn: ${valuesStr}`}
+                  rules={[
+                    {
+                      required: true,
+                      validator: (_, value) =>
+                        variants[index] != null
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error("Vui lòng tải lên đủ 3 hình ảnh")
+                            ),
+                    },
+                  ]}
+                >
+                  <Flex gap={16} align="center">
+                    <ImageUpload
+                      disabled={editVariantIndex !== index}
+                      defaultValue={variant.imageUrl}
+                      onChange={(file, url) => {
+                        handleVariantChange(index, "image", file);
+                        handleVariantChange(index, "imageUrl", url);
+                      }}
+                    />
+                    <InputNumber
+                      disabled={editVariantIndex !== index}
+                      defaultValue={variant.price}
+                      controls={false}
+                      min={1000}
+                      formatter={(value) =>
+                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }
+                      style={{ flex: 3, height: "40px", padding: "4px 0" }}
+                      onChange={(value) =>
+                        handleVariantChange(index, "price", value)
+                      }
+                      placeholder="Giá sản phẩm"
+                    />
+                    <InputNumber
+                      disabled={true}
+                      defaultValue={variant.quantity}
+                      controls
+                      min={0}
+                      style={{ flex: 1, height: "40px", padding: "4px 0" }}
+                      onChange={(value) =>
+                        handleVariantChange(index, "quantity", value)
+                      }
+                      placeholder="Số lượng sản phẩm"
+                    />
+                    {editVariantIndex === index ? (
+                      <>
+                        <Button
+                          loading={loading}
+                          type="primary"
+                          style={{ width: "fit-content" }}
+                          onClick={() =>
+                            handleOpenInventoryModal(
+                              variant.id,
+                              variant.quantity
+                            )
+                          }
+                        >
+                          <SaveOutlined />
+                          Cập nhật tồn kho
+                        </Button>
+                        <Button
+                          loading={loading}
+                          type="primary"
+                          style={{ width: "fit-content" }}
+                          onClick={() => handleEditVariant(variant.id)}
+                        >
+                          <SaveOutlined />
+                          Lưu
+                        </Button>
+                        <Button
+                          type="primary"
+                          danger
+                          style={{ width: "fit-content" }}
+                          onClick={handleResetVariant}
+                        >
+                          <CloseCircleOutlined />
+                          Hủy
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          loading={loading}
+                          type="primary"
+                          style={{ width: "fit-content" }}
+                          onClick={() => handleGetInventoryLog(variant.id)}
+                        >
+                          <SaveOutlined />
+                          Lịch sử tồn kho
+                        </Button>
+                        <Button
+                          disabled={editVariantIndex !== undefined}
+                          style={{ width: "fit-content" }}
+                          onClick={() => setEditVariantIndex(index)}
+                        >
+                          <EditOutlined />
+                          Chỉnh sửa
+                        </Button>
+                      </>
+                    )}
+                  </Flex>
+                  <Divider />
+                </Form.Item>
+              );
+            })}
+            <Form.Item
+              name="desc"
+              label="Mô tả"
+              rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+            >
+              <ReactQuill
+                className={cx("quill")}
+                theme="snow"
+                placeholder="Vui lòng nhập mô tả"
+                onChange={(value) => setDesc(value)}
+              />
+            </Form.Item>
+          </Form>
+          <Flex justify="end">
+            <Space>
+              <Button onClick={handleCancel} danger>
+                Hủy
+              </Button>
+              <Button onClick={handleUpdateProduct} type="primary">
+                Lưu sản phẩm
+              </Button>
+            </Space>
+          </Flex>
+        </Flex>
+      </Modal>
+      <Modal
+        destroyOnClose={true}
+        title={"Cập nhật tồn kho cho sản phẩm"}
+        open={openInventoryModal}
+        onCancel={() => handleCloseInventoryModal()}
+        footer={[
+          <Button
+            key={1}
+            loading={loading}
+            type="primary"
+            style={{ width: "fit-content" }}
+            onClick={() => handleUpdateProductVariantQuantity()}
           >
-            <ReactQuill
-              className={cx("quill")}
-              theme="snow"
-              placeholder="Vui lòng nhập mô tả"
-              onChange={(value) => setDesc(value)}
+            <SaveOutlined />
+            Lưu
+          </Button>,
+          <Button
+            key={2}
+            type="primary"
+            danger
+            style={{ width: "fit-content" }}
+            onClick={() => handleCloseInventoryModal()}
+          >
+            <CloseCircleOutlined />
+            Hủy
+          </Button>,
+        ]}
+        afterClose={() => formUpdateQuantity.resetFields()}
+      >
+        <Form form={formUpdateQuantity} layout="vertical">
+          <Form.Item
+            name="productVariantId"
+            label="Mã sản phẩm"
+            initialValue={currentProductVariantId}
+          >
+            <InputNumber
+              disabled
+              placeholder="Mã sản phẩm"
+              size="large"
+              style={{
+                width: "100%",
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="oldQuantity"
+            label="Số lượng tồn kho cũ"
+            initialValue={oldQuantity}
+          >
+            <InputNumber
+              disabled
+              placeholder="Số lượng tồn kho cũ"
+              size="large"
+              style={{
+                width: "100%",
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="newQuantity"
+            label="Số lượng tồn kho mới"
+            rules={[
+              { required: true, message: "Vui lòng nhập số lượng tồn kho mới" },
+            ]}
+          >
+            <InputNumber
+              placeholder="Nhập số lượng tồn kho mới"
+              style={{
+                width: "100%",
+              }}
+              size="large"
+            />
+          </Form.Item>
+          <Form.Item
+            name="purchasePrice"
+            label="Giá nhập"
+            rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+          >
+            <InputNumber
+              min={1000}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              style={{
+                width: "100%",
+              }}
+              placeholder="Nhập giá nhập"
+              size="large"
             />
           </Form.Item>
         </Form>
-        <Flex justify="end">
-          <Space>
-            <Button onClick={handleCancel} danger>
-              Hủy
-            </Button>
-            <Button onClick={handleUpdateProduct} type="primary">
-              Lưu sản phẩm
-            </Button>
-          </Space>
-        </Flex>
-      </Flex>
-    </Modal>
+      </Modal>
+      <Modal
+        destroyOnClose={true}
+        title={"Lịch sử cập nhật tồn kho"}
+        open={showInventoryLogsModal}
+        onCancel={() => handleCloseInventoryLogModal()}
+        footer={[
+          <Button onClick={() => handleCloseInventoryLogModal()} key={1}>
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+      >
+        <Table
+          dataSource={inventoryLogs}
+          rowKey={(record) => record.id}
+          pagination={false}
+        >
+          <Column
+            title="Id"
+            dataIndex="id"
+            key="id"
+            sorter={(a: InventoryLog, b: InventoryLog) => {
+              return a.id - b.id;
+            }}
+          />
+          <Column
+            title="Số lượng tồn cũ"
+            dataIndex="oldQuantity"
+            key="oldQuantity"
+          />
+          <Column
+            title="Số lượng tồn mới"
+            dataIndex="newQuantity"
+            key="newQuantity"
+          />
+          <Column
+            title="Trạng thái"
+            dataIndex="purchasePrice"
+            key="purchasePrice"
+            render={(purchasePrice: number) => {
+              return formatCurrency(purchasePrice);
+            }}
+          />
+          <Column
+            title="Ngày cập nhật"
+            dataIndex="changedAt"
+            key="changedAt"
+            render={(changedAt: string) => {
+              return day(changedAt).format("DD-MM-YYYY");
+            }}
+          />
+        </Table>
+      </Modal>
+    </>
   );
 };
 
