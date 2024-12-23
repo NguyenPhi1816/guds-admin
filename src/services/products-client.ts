@@ -195,6 +195,8 @@ export const exportSalesReport = async (fromDate: string, toDate: string) => {
       // Chuyển đổi response thành blob
       const blob = await response.blob();
 
+      console.log(response);
+
       // Tạo URL cho file blob
       const url = window.URL.createObjectURL(blob);
 

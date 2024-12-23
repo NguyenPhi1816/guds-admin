@@ -9,6 +9,7 @@ import {
   Input,
   InputRef,
   message,
+  Select,
   Space,
   Switch,
   Table,
@@ -53,6 +54,7 @@ const CustomerPage = () => {
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
 
   useEffect(() => {
     const fetcher = async () => {
@@ -80,11 +82,18 @@ const CustomerPage = () => {
   useEffect(() => {
     if (data.length > 0) {
       const result = data.filter((item) => {
-        return item.id.toString().includes(searchValue.toLowerCase());
+        if (selectedStatus === "ALL") {
+          return item.id.toString().includes(searchValue.toLowerCase());
+        } else {
+          return (
+            item.id.toString().includes(searchValue.toLowerCase()) &&
+            selectedStatus === item.status
+          );
+        }
       });
       setSearchResult(result);
     }
-  }, [data, searchValue]);
+  }, [data, searchValue, selectedStatus]);
 
   const handleRefresh = (message: string) => {
     setRefresh(true);
@@ -227,10 +236,39 @@ const CustomerPage = () => {
               <Input
                 placeholder="Mã Đơn hàng"
                 suffix={<SearchOutlined />}
-                size="large"
                 value={searchValue}
                 onChange={(e) => {
                   setSearchValue(e.target.value);
+                }}
+              />
+              <Select
+                style={{ width: 250 }}
+                placeholder="Chọn trạng thái đơn hàng"
+                options={[
+                  {
+                    value: "ALL",
+                    label: "Tất cả",
+                  },
+                  {
+                    value: OrderStatus.PENDING,
+                    label: "Đang chờ xác nhận",
+                  },
+                  {
+                    value: OrderStatus.SHIPPING,
+                    label: "Đang giao hàng",
+                  },
+                  {
+                    value: OrderStatus.SUCCESS,
+                    label: "Giao hàng thành công",
+                  },
+                  {
+                    value: OrderStatus.CANCEL,
+                    label: "Đơn hàng bị hủy",
+                  },
+                ]}
+                value={selectedStatus}
+                onChange={(value: string) => {
+                  setSelectedStatus(value);
                 }}
               />
             </Space>
